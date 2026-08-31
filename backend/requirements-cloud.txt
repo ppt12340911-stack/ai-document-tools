@@ -10,6 +10,7 @@ Pillow
 opencv-python-headless
 imagehash
 numpy
+pandas
 scipy
 pykrige
 matplotlib
