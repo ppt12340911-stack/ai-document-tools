@@ -8,7 +8,7 @@
  * 請勿在此檔案放入 API Key 或其他機密資訊。
  */
 (function configureApiRouting() {
-    const configuredBase = "";
+    const configuredBase = "https://ai-document-tools.onrender.com";
     const apiBaseUrl = configuredBase.replace(/\/+$/, "");
 
     window.AI_TOOLS_CONFIG = Object.assign(
