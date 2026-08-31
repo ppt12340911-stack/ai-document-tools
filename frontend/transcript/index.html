@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 辨識手寫逐字稿 | AI 文件工具平台</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <a href="../" class="back-btn">← 返回工具平台</a>
+        <h1>AI 辨識<span>手寫逐字稿</span></h1>
+        <p class="page-subtitle">以手寫稿為絕對基準，AI 將參考音訊精準輸出數位逐字稿</p>
+
+        <div class="api-key-container">
+            <label for="apiKey">Gemini API Key</label>
+            <div class="api-key-wrapper">
+                <input type="password" id="apiKey" placeholder="請輸入您的 Google Gemini API Key" />
+                <button type="button" id="toggleApiBtn" class="toggle-btn" title="顯示/隱藏">👁️</button>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+            <!-- 區塊 1: 手寫稿上傳 -->
+            <div class="upload-section" id="dropZoneDocs">
+                <div class="upload-icon glow-green">📝</div>
+                <p class="upload-title">上傳原始手寫稿 (必填)</p>
+                <p class="upload-desc">請上傳圖片檔 (.jpg, .png) 或 PDF。<br>AI 會進行 100% 精準辨識。</p>
+                <input type="file" id="docsInput" multiple accept=".jpg,.jpeg,.png,.pdf" style="display: none;">
+                <div class="file-list" id="docsList"></div>
+            </div>
+
+            <!-- 區塊 2: 輔助音訊 -->
+            <div class="upload-section audio-section" id="dropZoneAudio">
+                <div class="upload-icon glow-purple">🎧</div>
+                <p class="upload-title">輔助會議錄音 (選填)</p>
+                <p class="upload-desc">遇到字跡潦草時，AI 會參考此處音訊。<br>上傳 .mp3, .wav, .m4a, .aac 或貼上 YouTube 連結</p>
+                
+                <input type="text" id="youtubeUrl" class="yt-input" placeholder="🔗 貼上 YouTube 影片網址...">
+                
+                <div style="margin: 1rem 0; opacity: 0.5;">— OR —</div>
+                
+                <button class="btn btn-secondary" id="browseAudioBtn" style="padding: 8px 16px;">選擇本地音檔</button>
+                <input type="file" id="audioInput" accept=".mp3,.wav,.m4a,.aac" style="display: none;">
+                <div class="file-list" id="audioList"></div>
+            </div>
+        </div>
+
+        <!-- 轉換按鈕與狀態 -->
+        <div class="action-bar">
+            <button class="btn btn-primary" id="analyzeBtn" disabled>
+                <span class="btn-icon">✨</span> 開始 AI 辨識
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p id="loadingText">正在上傳並進行 AI 深度分析中，大型音頻或 YouTube 可能需花費數分鐘...</p>
+        </div>
+
+        <!-- 結果區塊 -->
+        <div class="results" id="results">
+            <h2>📜 數位逐字稿成果</h2>
+            <div class="tools-bar">
+                <button class="btn-tool" id="copyBtn">📋 複製內文</button>
+                <button class="btn-tool" id="downloadTxtBtn">⬇️ 下載 TXT</button>
+            </div>
+            <textarea id="resultText" readonly class="result-textarea"></textarea>
+        </div>
+
+    </div>
+
+    <script src="../site-config.js"></script>
+    <script src="script.js?v=20260409"></script>
+</body>
+</html>

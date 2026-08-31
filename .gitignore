@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.crt
+
+# Runtime data
+backend/uploads/
+backend/**/*.db
+*.db
+*.sqlite
+*.sqlite3
+*.log
+db_dump.json
+
+# Local office/export files
+~$*
+*.tmp
+*.bak
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+

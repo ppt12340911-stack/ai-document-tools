@@ -1,0 +1,546 @@
+:root {
+    --text-dim: rgba(255, 255, 255, 0.5);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --radius-sm: 8px;
+    --primary: var(--primary-blue);
+    --primary-light: var(--accent-cyan);
+    --danger: #ff4d4f;
+}
+
+/* 繼承 portal 基礎變數，額外新增版面配置 */
+.gis-body {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 防止整個頁面捲動 */
+}
+
+/* 頂部導覽列樣式已遷移至 portal.css */
+
+/* 三欄佈局 */
+.gis-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    padding: 1rem;
+    gap: 1rem;
+}
+
+.panel {
+    background: var(--card-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* 自訂捲軸 */
+.panel::-webkit-scrollbar {
+    width: 6px;
+}
+.panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.data-panel, .control-panel {
+    width: 320px;
+    flex-shrink: 0;
+}
+
+.map-panel {
+    flex: 1;
+    padding: 0; 
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: var(--accent-cyan);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
+}
+
+/* 表單與按鈕 */
+.form-group {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+    color: var(--text-secondary);
+}
+
+input[type="text"], 
+input[type="number"], 
+input[type="password"], 
+select, 
+textarea {
+    width: 100%;
+    padding: 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+    font-family: inherit;
+    resize: vertical;
+}
+
+#manual-data {
+    min-height: 300px; /* 只針對批次輸入框加大 */
+}
+
+option {
+    background: #1f1c2c;
+    color: white;
+}
+
+input[type="range"] {
+    width: 100%;
+    margin-top: 5px;
+}
+
+.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+.checkbox-group label {
+    margin: 0;
+    cursor: pointer;
+}
+
+.btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    border: none;
+    background: var(--primary-blue);
+    color: #111;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+}
+.btn:hover { background: #5ce1e6; }
+
+.btn-secondary { background: rgba(255, 255, 255, 0.2); color: white; }
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.3); }
+
+.btn-ai {
+    background: linear-gradient(90deg, #7c4dff, #b388ff);
+    color: white;
+    width: 100%;
+    margin-top: 5px;
+}
+
+.hint {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-top: 2px;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 1.5rem 0;
+}
+
+/* 拖曳上傳區 */
+.upload-area {
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 2rem 1rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    transition: var(--transition);
+    cursor: pointer;
+}
+.upload-area:hover, .upload-area.dragover {
+    border-color: var(--accent-cyan);
+    background: rgba(0, 210, 255, 0.05);
+}
+
+/* 地圖區域 */
+.map-controls {
+    padding: 10px 15px;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid var(--card-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 500;
+}
+#basemap-select { width: auto; }
+
+#map {
+    flex: 1;
+    background: #e5e5e5; /* 給地圖載入前一點底色 */
+    z-index: 1; /* 防止影響視窗 */
+}
+
+/* AI 報告蓋板 */
+#ai-report-container {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 400px;
+    max-height: 50%;
+    background: rgba(20, 20, 30, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid #7c4dff;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: cardIn 0.3s ease-out;
+}
+
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ai-header {
+    background: #7c4dff;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.ai-header h4 { margin: 0; }
+.btn-small { padding: 4px 8px; font-size: 0.8rem; background: transparent; border: 1px solid white; color: white;}
+.btn-small:hover { background: white; color: #7c4dff;}
+
+#ai-report-content {
+    padding: 15px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+/* Github alert 樣式應用在報告裡 if markdown creates blockquotes */
+#ai-report-content blockquote {
+    border-left: 4px solid var(--accent-cyan);
+    padding-left: 10px;
+    margin-left: 0;
+    color: #eee;
+}
+
+/* ====== 標記切換 ====== */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.checkbox-group input { width: 16px; height: 16px; cursor: pointer; }
+
+/* ====== 手動輸入區 ====== */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.manual-coord-input {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ====== 專案圖庫 ====== */
+.project-list {
+    min-height: 50px; /* 確保至少有一點高度 */
+    max-height: 250px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px;
+}
+
+.project-empty {
+    margin: 0;
+    padding: 1.25rem 0.75rem;
+    color: var(--text-dim);
+    text-align: center;
+}
+
+.project-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    margin-bottom: 4px;
+}
+
+.project-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary-light);
+}
+
+.project-item.active {
+    border-color: var(--primary);
+    background: rgba(41, 121, 255, 0.1);
+}
+
+.project-info h5 {
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.project-meta {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+}
+
+.project-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.project-item:hover .project-actions {
+    opacity: 1;
+}
+
+.btn-mini {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ccc;
+    line-height: 1;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.8);
+    --text-dim: rgba(255, 255, 255, 0.5); /* 補上缺少的變數 */
+    --glass-border: rgba(255, 255, 255, 0.2); /* 補上缺少的變數 */
+    --radius: 20px;
+    --radius-sm: 8px; /* 補上缺少的變數 */
+    --primary: var(--primary-blue);
+    --primary-light: var(--accent-cyan);
+    --danger: #ff4d4f;
+    --transition: all 0.3s ease;
+}
+
+.btn-mini:hover {
+    background: var(--danger);
+    color: white;
+}
+
+/* ====== 地圖 Overlays ====== */
+#map { position: relative; }
+
+.map-overlay-title {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    color: white;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+    text-align: center;
+    max-width: 80%;
+}
+
+.map-overlay-legend {
+    position: absolute;
+    bottom: 30px;
+    right: 20px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 15px;
+    border-radius: 12px;
+    color: white;
+    min-width: 150px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.legend-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--accent-cyan);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding-bottom: 6px;
+    text-align: center;
+}
+
+.legend-gradient-container {
+    display: flex;
+    align-items: stretch;
+    height: 120px;
+}
+
+.legend-gradient {
+    width: 20px;
+    height: 100%;
+    border-radius: 4px;
+    margin-right: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.legend-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #eee;
+    font-weight: 500;
+}
+
+.legend-line-row {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.legend-item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.75rem;
+    color: #eee;
+}
+
+.legend-line-sample {
+    width: 30px;
+    height: 0;
+    border-bottom-width: 2px;
+}
+
+/* ====== 專業匯出 Modal ====== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: #1a1a2e;
+    border: 1px solid var(--accent-cyan);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+
+.modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    text-align: center;
+}
+
+#export-preview-img {
+    max-width: 100%;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* 指北針 indicator */
+.north-arrow-control {
+    background: rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 50% !important;
+    padding: 5px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    width: 40px;
+    height: 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.north-arrow-control span {
+    font-size: 24px;
+    line-height: 1;
+}
+
+/* 響應式微調 */
+@media (max-width: 768px) {
+    .gis-layout { grid-template-columns: 1fr; }
+    .page-header h1 { font-size: 1.8rem; }
+    .map-overlay-title { font-size: 1rem; width: 90%; }
+    .map-overlay-legend { bottom: 10px; right: 10px; padding: 10px; scale: 0.8; transform-origin: bottom right; }
+}

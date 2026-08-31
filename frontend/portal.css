@@ -1,0 +1,401 @@
+/* ============================================
+   AI 文件工具平台 - 入口門戶樣式
+   ============================================ */
+
+:root {
+    --primary-blue: #00d2ff;
+    --primary-dark: #3a7bd5;
+    --accent-cyan: #00d2ff;
+    --bg-gradient: linear-gradient(135deg, #1f1c2c 0%, #928DAB 100%);
+    --card-glass: rgba(255, 255, 255, 0.1);
+    --card-border: rgba(255, 255, 255, 0.2);
+    --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --card-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.5);
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.8);
+    --radius: 20px;
+    --transition: all 0.3s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg-gradient);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* ===== 背景裝飾動態圓球 ===== */
+.bg-orbs {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+    animation: orbFloat 20s ease-in-out infinite;
+}
+
+.orb-1 {
+    width: 400px; height: 400px;
+    background: var(--primary-blue);
+    top: -100px; right: -100px;
+    animation-delay: 0s;
+}
+
+.orb-2 {
+    width: 300px; height: 300px;
+    background: #7c4dff;
+    bottom: 10%; left: -80px;
+    animation-delay: -7s;
+}
+
+.orb-3 {
+    width: 250px; height: 250px;
+    background: var(--accent-cyan);
+    top: 50%; right: 20%;
+    animation-delay: -14s;
+}
+
+@keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(30px, -40px) scale(1.05); }
+    50% { transform: translate(-20px, 20px) scale(0.95); }
+    75% { transform: translate(15px, 30px) scale(1.02); }
+}
+
+/* ===== Header ===== */
+.portal-header {
+    padding: 4rem 2rem 3.5rem;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.portal-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(0, 210, 255, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.header-content {
+    position: relative;
+    z-index: 2;
+}
+
+.portal-header h1 {
+    font-size: 3.2rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+    text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+}
+
+/* ===== 通用梯度文字 ===== */
+.gradient-text {
+    background: linear-gradient(135deg, var(--primary-blue), #00e5ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+
+/* ===== 頂部導覽列 (分析工具共用版) ===== */
+.portal-nav {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 2rem;
+    background: rgba(13, 17, 23, 0.75);
+    backdrop-filter: blur(15px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    justify-content: space-between;
+    position: relative; /* 新增：讓子元素可以絕對定位 */
+}
+
+.nav-left, .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.nav-logo {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 10; /* 確保在標題之上，避免重疊時無法點擊 */
+}
+
+.nav-logo:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateX(-3px);
+    border-color: var(--primary-blue);
+}
+
+.nav-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    position: absolute; /* 新增：絕對定位 */
+    left: 50%;
+    transform: translateX(-50%); /* 完美的水平置中 */
+    white-space: nowrap;
+}
+
+.nav-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* ===== Main Content ===== */
+.portal-main {
+    max-width: 960px;
+    margin: -1rem auto 3rem;
+    padding: 0 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* ===== Tools Grid ===== */
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    animation: gridFadeIn 0.6s ease-out;
+}
+
+@keyframes gridFadeIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Tool Card ===== */
+.tool-card {
+    background: var(--card-glass);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius);
+    padding: 2.5rem 2rem;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text-primary);
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--card-border);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.tool-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-blue), var(--accent-cyan));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.tool-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--card-shadow-hover);
+    border-color: rgba(33, 150, 243, 0.15);
+}
+
+.tool-card:hover::before {
+    opacity: 1;
+}
+
+.tool-card:active {
+    transform: translateY(-2px);
+}
+
+/* Coming soon card */
+.card-coming-soon {
+    opacity: 0.55;
+    cursor: default;
+    pointer-events: none;
+}
+
+.card-coming-soon:hover {
+    transform: none;
+    box-shadow: var(--card-shadow);
+}
+
+/* ===== Card Icon ===== */
+.card-icon {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.icon-emoji {
+    font-size: 2.5rem;
+    position: relative;
+    z-index: 2;
+    transition: transform 0.3s ease;
+}
+
+.tool-card:hover .icon-emoji {
+    transform: scale(1.15);
+}
+
+.icon-glow {
+    position: absolute;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    opacity: 0.15;
+    filter: blur(12px);
+    transition: var(--transition);
+}
+
+.tool-card:hover .icon-glow {
+    opacity: 0.3;
+    transform: scale(1.3);
+}
+
+.glow-blue { background: #2196F3; }
+.glow-red { background: #f44336; }
+.glow-purple { background: #7c4dff; }
+
+/* ===== Card Text ===== */
+.card-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+    letter-spacing: 0px;
+}
+
+.card-desc {
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1.2rem;
+}
+
+/* ===== Tags ===== */
+.card-tag {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+
+.tag-ai {
+    background: rgba(0, 210, 255, 0.15);
+    color: #00d2ff;
+    border: 1px solid rgba(0, 210, 255, 0.3);
+}
+
+.tag-convert {
+    background: rgba(244, 67, 54, 0.15);
+    color: #ff7961;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.tag-soon {
+    background: rgba(124, 77, 255, 0.15);
+    color: #b388ff;
+    border: 1px solid rgba(124, 77, 255, 0.3);
+}
+
+/* ===== Footer ===== */
+.portal-footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .tools-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .portal-header h1 {
+        font-size: 2.2rem;
+    }
+
+    .tool-card {
+        padding: 2rem 1.5rem;
+    }
+
+    .nav-title {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .tools-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .portal-nav {
+        flex-direction: column;
+        gap: 0.8rem;
+        padding: 1rem;
+    }
+
+    .nav-logo, .nav-actions {
+        position: static;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .nav-title {
+        position: static;
+        transform: none;
+        font-size: 1rem;
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+    .portal-header {
+        padding: 2rem 1rem 2.5rem;
+    }
+}

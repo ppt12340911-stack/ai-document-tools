@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>相片智能篩選 | AI 文件工具平台</title>
+    <link rel="stylesheet" href="style.css?v=20260416">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="container">
+        <a href="../" class="back-btn">← 返回工具平台</a>
+
+        <header class="page-header">
+            <div class="header-icon">🖼️</div>
+            <h1>相片<span>智能篩選</span></h1>
+            <p class="subtitle">批量分析圖片品質 · 自動偵測模糊/過曝/重複照片</p>
+        </header>
+
+        <!-- 上傳區 -->
+        <section class="upload-section" id="dropZone">
+            <div class="upload-icon">📸</div>
+            <p class="upload-title">拖曳圖片或 ZIP 壓縮包至此，或點擊選擇</p>
+            <p class="upload-hint">支援整包上傳 (LINE相簿/雲端下載用) 或單張 JPG/PNG/BMP 等多檔選取</p>
+            <input type="file" id="fileInput" multiple accept=".zip,.jpg,.jpeg,.png,.bmp,.webp" style="display:none;">
+            <button class="btn-select" onclick="document.getElementById('fileInput').click()">選擇檔案</button>
+        </section>
+
+        <!-- 檔案計數 -->
+        <div class="file-counter" id="fileCounter" style="display:none;">
+            <span id="fileCountText">已選取 0 張圖片</span>
+            <button class="btn-clear-small" id="clearBtn">清除全部</button>
+        </div>
+
+        <!-- 目標人物設定 (可選) -->
+        <section class="target-section" id="targetZone">
+            <div class="target-box">
+                <div class="target-icon">🎯</div>
+                <div class="target-text">
+                    <h4>尋找特定人物 (選填)</h4>
+                    <p id="targetHint">點擊或拖曳想尋找的人的大頭貼至此</p>
+                </div>
+                <input type="file" id="targetInput" accept=".jpg,.jpeg,.png,.webp" style="display:none;">
+                <button class="btn-select-target" onclick="document.getElementById('targetInput').click()">設定目標</button>
+                <img id="targetPreview" src="" alt="目標" style="display:none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                <button class="btn-clear-target" id="clearTargetBtn" style="display:none;" title="移除目標">❌</button>
+            </div>
+        </section>
+
+        <!-- 篩選參數設定 -->
+        <section class="params-panel" id="paramsPanel" style="display:none;">
+            <h2 class="section-title">⚙️ 篩選參數設定</h2>
+            <div class="params-grid">
+                <div class="param-item">
+                    <label>清晰度門檻 <span class="param-hint">（越高越嚴格）</span></label>
+                    <div class="param-row">
+                        <input type="range" id="blurThreshold" min="10" max="500" value="80" step="5">
+                        <span class="param-value" id="blurVal">80</span>
+                    </div>
+                    <p class="param-desc">低於此數值的圖片會被標記為「模糊」</p>
+                </div>
+
+                <div class="param-item">
+                    <label>亮度範圍</label>
+                    <div class="param-row">
+                        <span class="param-label-sm">最低</span>
+                        <input type="range" id="minBrightness" min="0" max="100" value="30" step="5">
+                        <span class="param-value" id="minBriVal">30</span>
+                        <span class="param-label-sm">最高</span>
+                        <input type="range" id="maxBrightness" min="150" max="255" value="220" step="5">
+                        <span class="param-value" id="maxBriVal">220</span>
+                    </div>
+                    <p class="param-desc">超出此範圍的圖片會被標記為「過曝/過暗」</p>
+                </div>
+
+                <div class="param-item">
+                    <label>重複相似度門檻 <span class="param-hint">（越小越嚴格）</span></label>
+                    <div class="param-row">
+                        <input type="range" id="hashThreshold" min="1" max="20" value="8" step="1">
+                        <span class="param-value" id="hashVal">8</span>
+                    </div>
+                    <p class="param-desc">pHash 差距小於此值的圖片視為重複</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 開始分析按鈕 -->
+        <div class="action-bar" id="actionBar" style="display:none;">
+            <button class="btn-analyze" id="analyzeBtn">
+                <span class="btn-icon">🔍</span> 開始智能篩選
+            </button>
+        </div>
+
+        <!-- 進度 -->
+        <div class="loading-bar" id="loadingBar" style="display:none;">
+            <div class="loading-spinner"></div>
+            <p id="loadingText">正在分析圖片，請稍候...</p>
+        </div>
+
+        <!-- 統計摘要 -->
+        <section class="summary-bar" id="summaryBar" style="display:none;">
+            <div class="summary-chips">
+                <button class="chip chip-all active" data-filter="all" id="chip-all">全部 <span id="cnt-all">0</span></button>
+                <button class="chip chip-target" data-filter="target" id="chip-target" style="display:none;">🎯 找到目標 <span id="cnt-target">0</span></button>
+                <button class="chip chip-keep" data-filter="keep" id="chip-keep">✓ 保留 <span id="cnt-keep">0</span></button>
+                <button class="chip chip-blurry" data-filter="blurry" id="chip-blurry">~ 模糊 <span id="cnt-blurry">0</span></button>
+                <button class="chip chip-exposure" data-filter="exposure" id="chip-exposure">☀ 曝光 <span id="cnt-exposure">0</span></button>
+                <button class="chip chip-duplicate" data-filter="duplicate" id="chip-duplicate">≈ 重複 <span id="cnt-duplicate">0</span></button>
+            </div>
+            <div class="summary-actions">
+                <button class="btn-export" id="exportBtn">⬇ 匯出 CSV 報表</button>
+                <button class="btn-download" id="downloadZipBtn" style="display:none;">⬇ 下載分類圖片 (ZIP)</button>
+            </div>
+        </section>
+
+        <!-- 結果網格 -->
+        <section class="results-grid" id="resultsGrid"></section>
+
+        <!-- 重新篩選按鈕 -->
+        <div class="reanalyze-bar" id="reanalyzeBar" style="display:none;">
+            <button class="btn-reanalyze" id="reanalyzeBtn">
+                <span>🔄</span> 調整參數後重新篩選
+            </button>
+        </div>
+    </div>
+
+    <script src="../site-config.js"></script>
+    <script src="script.js?v=20260416"></script>
+</body>
+</html>

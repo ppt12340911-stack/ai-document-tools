@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ai-document-tools
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/version
+    envVars:
+      - key: FRONTEND_ORIGIN
+        sync: false

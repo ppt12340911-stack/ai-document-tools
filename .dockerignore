@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+venv
+env
+__pycache__
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
+*.log
+backend/uploads
+backend/scratch
+backend/db_dump.json

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIS 等濃度/高程分析工具</title>
+    <link rel="stylesheet" href="../portal.css">
+    <link rel="stylesheet" href="gis.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- PapaParse for CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- html2canvas for map screenshot -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+
+<body class="gis-body">
+    <!-- Navbar -->
+    <nav class="portal-nav">
+        <a href="../" class="nav-logo">⬅️ 回首頁</a>
+        <div class="nav-title">🗺️ GIS <span class="gradient-text">等濃度/高程分析</span></div>
+    </nav>
+
+    <!-- 主板塊：三欄式設計 -->
+    <main class="gis-layout">
+
+        <!-- 左欄：資料面板 -->
+        <aside class="panel data-panel">
+            <h3 style="display:flex; justify-content:space-between; align-items:center;">
+                <span>🗃️ 專案圖庫</span>
+                <button class="btn-mini" onclick="loadProjects()" title="重新整理"
+                    style="font-size:1rem; padding:2px 8px;">🔄</button>
+            </h3>
+            <div id="project-list" class="project-list">
+                <p class="project-empty">載入專案中...</p>
+            </div>
+            <hr>
+
+            <h3>📂 資料輸入</h3>
+            <div class="upload-area" id="drop-zone">
+                <p>拖曳 CSV/Excel 檔案或點擊上傳</p>
+                <input type="file" id="file-input" accept=".csv, .xlsx" hidden>
+                <button class="btn" onclick="document.getElementById('file-input').click()">選擇檔案</button>
+            </div>
+
+            <div class="field-mapping" id="mapping-section" style="display:none;">
+                <h4>對應欄位設定</h4>
+                <div class="form-group">
+                    <label>X 座標 (經度/TWD97 X):</label>
+                    <select id="col-x"></select>
+                </div>
+                <div class="form-group">
+                    <label>Y 座標 (緯度/TWD97 Y):</label>
+                    <select id="col-y"></select>
+                </div>
+                <div class="form-group">
+                    <label>數值 (Value):</label>
+                    <select id="col-v"></select>
+                </div>
+                <p class="hint">系統會自動嘗試辨識 TWD97 並轉換為 WGS84</p>
+
+                <h4 style="margin-top:20px;">基礎設定</h4>
+                <div class="form-group">
+                    <label>選擇類別:</label>
+                    <input type="text" id="pollutant-type" value="PM2.5" placeholder="例如 PM2.5 / NO2">
+                </div>
+            </div>
+
+
+            <hr>
+            <h3>📝 批次輸入測試資料</h3>
+            <textarea id="manual-data"
+                placeholder="X,Y,Value&#10;121.5,25.0,15&#10;121.52,25.02,30&#10;121.48,25.05,5&#10;121.55,24.98,25"
+                rows="12"></textarea>
+            <button class="btn btn-secondary" onclick="loadManualData()">載入測試資料</button>
+        </aside>
+
+        <!-- 中欄：地圖面板 -->
+        <section class="panel map-panel">
+            <div class="map-controls">
+                <span>底圖: </span>
+                <select id="basemap-select">
+                    <option value="osm">OpenStreetMap</option>
+                    <option value="satellite">ESRI 衛星圖</option>
+                </select>
+                <button class="btn" id="generate-btn" style="margin-left:auto;">🚀 生成等濃度/高程圖</button>
+            </div>
+            <div id="map">
+                <!-- 標題框 (浮動) -->
+                <div id="map-title-box" class="map-overlay-title" style="display:none;"></div>
+                <!-- 圖例框 (浮動) -->
+                <div id="map-legend-box" class="map-overlay-legend" style="display:none;"></div>
+            </div>
+
+            <!-- AI 分析報告區塊 -->
+            <div id="ai-report-container" style="display:none;">
+                <div class="ai-header">
+                    <h4>🤖 AI 分析報告</h4>
+                    <button class="btn btn-small" onclick="closeAiReport()">關閉</button>
+                </div>
+                <div id="ai-report-content"></div>
+            </div>
+        </section>
+
+        <!-- 右欄：控制面板 -->
+        <aside class="panel control-panel">
+            <h3>🎛️ 視覺設定</h3>
+
+            <div class="form-group">
+                <label>插值方法:</label>
+                <select id="config-method">
+                    <option value="idw">IDW (反距離權重)</option>
+                    <option value="kriging">Kriging (克利金)</option>
+                </select>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="config-show-fill">
+                <label for="config-show-fill">顯示顏色塗滿區域</label>
+            </div>
+
+            <div class="form-group">
+                <label>色帶 (Colormap, 用於填色):</label>
+                <select id="config-cmap">
+                    <option value="viridis">Viridis (預設)</option>
+                    <option value="jet">Jet (彩虹)</option>
+                    <option value="plasma">Plasma</option>
+                    <option value="magma">Magma</option>
+                    <option value="coolwarm">Coolwarm</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>區間步距 (Level Step):</label>
+                <input type="number" id="config-step" placeholder="自動" min="0" step="0.1">
+                <small class="hint">留空代表自動等分區間</small>
+            </div>
+
+            <div class="form-group">
+                <label>透明度 (Alpha): <span id="alpha-val">0.6</span></label>
+                <input type="range" id="config-alpha" min="0.1" max="1" step="0.1" value="0.6">
+            </div>
+
+            <div class="form-group">
+                <label>等濃度/高程線粗細: <span id="lw-val">8.0</span></label>
+                <input type="range" id="config-linewidth" min="0" max="15" step="0.5" value="8.0">
+            </div>
+
+            <div class="form-group">
+                <label>等濃度/高程線顏色:</label>
+                <input type="color" id="config-linecolor" value="#ff0000"
+                    style="width:100%; height:30px; border:none; border-radius:4px; padding:0;">
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="config-smooth" checked>
+                <label for="config-smooth">高斯平滑 (Gaussian Smooth)</label>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="config-show-label" checked>
+                <label for="config-show-label">在線條上標示數值 (白底)</label>
+            </div>
+
+            <div class="form-group">
+                <label>數值標籤大小:</label>
+                <input type="number" id="config-labelsize" min="6" max="36" step="1" value="36">
+            </div>
+
+            <div class="form-group">
+                <label>等濃度/高程線樣式:</label>
+                <select id="config-linestyle">
+                    <option value="solid">實線 (Solid)</option>
+                    <option value="dashed">虛線 (Dashed)</option>
+                    <option value="dotted">點線 (Dotted)</option>
+                </select>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="config-show-markers">
+                <label for="config-show-markers">🚩 顯示座標點標標記 (可拖曳校正)</label>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="config-show-north" checked>
+                <label for="config-show-north">🧭 顯示指北針 (預設西北角)</label>
+            </div>
+
+            <hr>
+            <h3>💾 專案儲存</h3>
+            <div class="form-group">
+                <label>地圖標題:</label>
+                <input type="text" id="config-title" placeholder="輸入分析圖標題 (會顯示在地圖上)">
+            </div>
+            <div class="form-group">
+                <label>專案儲存名稱:</label>
+                <input type="text" id="project-name" placeholder="例如: 2024北部PM2.5分析">
+            </div>
+            <button class="btn btn-primary" onclick="saveCurrentProject()">💾 儲存目前專案</button>
+
+            <hr>
+            <h3>🤖 AI 分析 (可選)</h3>
+            <p class="hint">呼叫 Gemini 進行數據分佈解釋與報告建議。</p>
+            <div class="form-group">
+                <label>Gemini API Key:</label>
+                <input type="password" id="api-key" placeholder="輸入 API Key">
+            </div>
+            <button class="btn btn-ai" id="ai-btn" onclick="startAIAnalysis()">🧠 執行 AI 分析</button>
+
+            <hr>
+            <h3>📥 匯出成果</h3>
+            <button class="btn btn-secondary" onclick="exportGeoJSON()">匯出 GeoJSON</button>
+            <button class="btn btn-secondary" style="margin-top:5px;" onclick="exportMapImage()">儲存地圖截圖</button>
+            <button class="btn btn-primary" style="margin-top:5px; background:var(--accent-cyan); color:#111;"
+                onclick="exportProfessionalImage()">📥 專業 GIS 導出 (帶座標軸)</button>
+
+        </aside>
+    </main>
+
+    <!-- 專業匯出預覽 Modal -->
+    <div id="export-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🖼️ 專業 GIS 匯出預覽</h3>
+                <button class="close-btn" onclick="closeExportModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <img id="export-preview-img" src="" alt="Export Preview">
+                <p class="hint" style="margin-top:10px;">包含 TWD97 座標刻度軸與指北針，適合用於正式報表。</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="downloadExportImage()">💾 下載此圖</button>
+                <button class="btn btn-secondary" onclick="closeExportModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="../site-config.js"></script>
+    <script src="gis.js"></script>
+</body>
+
+</html>

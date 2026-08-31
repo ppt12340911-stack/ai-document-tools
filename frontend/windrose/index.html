@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>風花圖分析 | AI 文件工具平台</title>
+    <meta name="description" content="繪製風花圖與濃度風花圖，支援專案儲存與圖片匯出">
+    <link rel="stylesheet" href="../portal.css">
+    <link rel="stylesheet" href="style.css?v=20240417">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+
+<body class="wr-body">
+    <!-- 背景動態圓球 -->
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="portal-nav">
+        <a href="../" class="nav-logo">⬅️ 回首頁</a>
+        <div class="nav-title">🌬️ <span>污染<span class="gradient-text">風花圖分析</span></span></div>
+        <div class="nav-actions">
+            <button type="button" class="btn btn-secondary btn-small" id="saveProjectBtn" style="color:white;">💾
+                儲存專案</button>
+            <button type="button" class="btn btn-primary btn-small" id="exportPngBtn">📸 匯出 PNG</button>
+        </div>
+    </nav>
+
+    <!-- 主板塊：三欄式設計 -->
+    <main class="gis-layout">
+
+        <!-- 左欄：資料面板 -->
+        <aside class="panel data-panel">
+
+            <h3>&#128218; 專案圖庫</h3>
+            <div id="projectList" class="project-list" style="min-height: 250px;">
+                <p class="project-empty">載入專案中...</p>
+            </div>
+            <button type="button" class="btn btn-secondary" id="newProjectBtn"
+                style="width:100%;margin-top:6px;">&#65291; 新增專案</button>
+
+            <hr>
+
+            <h3>&#128194; 資料輸入</h3>
+            <div class="upload-area" id="dropZone">
+                <p>拖曳 CSV 檔案或點擊上傳</p>
+                <input type="file" id="csvInput" accept=".csv" hidden>
+                <button type="button" class="btn btn-cyan" onclick="document.getElementById('csvInput').click()">選擇檔案</button>
+            </div>
+
+            <div id="mappingSection" style="display:none;">
+                <h4>欄位對應設定</h4>
+                <div class="form-group">
+                    <label>風向欄位 (0-360 deg):</label>
+                    <select id="dirColSel"></select>
+                </div>
+                <div class="form-group">
+                    <label>風速欄位 (m/s):</label>
+                    <select id="speedColSel"></select>
+                </div>
+                <div class="form-group">
+                    <label>污染濃度欄位:</label>
+                    <select id="concColSel"></select>
+                </div>
+                <div class="form-group">
+                    <label>方位數:</label>
+                    <select id="nDirsSel">
+                        <option value="16">16 方位</option>
+                        <option value="8">8 方位</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr>
+
+            <h3>&#128221; 手動輸入測試資料</h3>
+            <p class="hint">格式：標題列 + 數據 (支援空格, Tab 或逗號分隔)</p>
+            <textarea id="manualData" rows="12"
+                placeholder="風向 風速 濃度&#10;225 3.2 45.6&#10;180 5.1 88.2&#10;270 1.8 22.1&#10;90 8.3 120.5&#10;315 2.0 35.0"
+                style="min-height: 350px;"></textarea>
+            <button type="button" class="btn btn-secondary" style="width:100%;margin-top:6px;"
+                onclick="loadManualData()">載入手動資料</button>
+        </aside>
+
+        <!-- 中欄：圖表面板 -->
+        <section class="panel chart-panel">
+            <div class="chart-controls">
+                <span id="dataInfo" class="data-badge" style="display:none;"></span>
+                <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+                    <label style="font-size:12px;color:rgba(255, 255, 255, 0.85);">方位:</label>
+                    <select id="nDirsTopSel" class="ctrl-select">
+                        <option value="16">16</option>
+                        <option value="8">8</option>
+                    </select>
+                    <button type="button" class="btn btn-cyan btn-small" id="computeBtn" style="margin-left: 8px; font-weight: 700;">
+                        ⚡ 繪製風花圖
+                    </button>
+                </div>
+            </div>
+
+            <!-- 載入提示 -->
+            <div id="chartPlaceholder" class="chart-placeholder">
+                <div style="font-size:48px;opacity:0.25;">&#127782;</div>
+                <p>請在左側上傳 CSV 或手動輸入資料<br>然後點擊「繪製風花圖」</p>
+            </div>
+
+            <!-- 雙圖並列 -->
+            <div id="dualChart" class="dual-chart" style="display:none;">
+                <div class="chart-card">
+                    <div class="chart-card-title">&#127775; 風花圖
+                        <span class="chart-badge">風向 &times; 風速頻率</span>
+                    </div>
+                    <div id="freqChart"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-title">&#127774; 污染濃度風花圖
+                        <span class="chart-badge">風向 &times; 風速 &times; 濃度</span>
+                    </div>
+                    <div id="concChart"></div>
+                </div>
+            </div>
+
+            <!-- AI 分析報告區塊 (改為懸浮視窗避免排版重疊) -->
+            <div id="aiReportContainer" style="display:none; position: absolute; z-index: 1000; top: 60px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 900px; max-height: calc(100vh - 120px); flex-direction: column; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 12px 40px rgba(0,0,0,0.15); overflow: hidden;">
+                <div class="ai-header" style="padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e0e6ed; display: flex; justify-content: space-between; align-items: center;">
+                    <h4 style="margin: 0; color: #1e293b; display: flex; align-items: center; gap: 8px;">🤖 AI 分析報告</h4>
+                    <button type="button" class="btn btn-small" onclick="closeAiReport()" style="padding: 4px 10px; font-size: 12px; background: #eaedf2; color: #475569; border: none; border-radius: 6px; cursor: pointer;">關閉</button>
+                </div>
+                <div id="aiReportContent" style="padding: 20px; color: #334155; line-height: 1.6; font-size: 14px; max-height: 400px; overflow-y: auto;"></div>
+            </div>
+
+            <!-- 統計列 -->
+            <div id="statsBar" class="stats-bar" style="display:none;">
+                <span id="statRecords"></span>
+                <span id="statDirs"></span>
+                <span id="statConc"></span>
+            </div>
+        </section>
+
+        <!-- 右欄：控制面板 -->
+        <aside class="panel control-panel">
+
+            <h3>&#127931; 風速級距設定 (m/s)</h3>
+            <div class="form-group">
+                <label>邊界值 (逗號分隔):</label>
+                <input type="text" id="speedBinsInput" value="0,1,3,5,7,10" placeholder="0,1,3,5,7,10">
+                <small class="hint">系統自動產生: 低/中/高 標籤</small>
+            </div>
+            <div id="speedBinsPreview" class="bins-preview"></div>
+
+            <h3>&#127912; 顯示設定</h3>
+            <div class="form-group">
+                <label>散佈圓圈大小倍率(筆數&lt;100):</label>
+                <input type="number" id="markerSizeMultiplier" min="0.1" max="20.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="form-group" style="margin-top: 12px;">
+                <label>風花圖標題:</label>
+                <input type="text" id="freqTitleInput" placeholder="預設: 風花圖">
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+                <label>濃度圖標題:</label>
+                <input type="text" id="concTitleInput" placeholder="預設: 污染濃度分析">
+            </div>
+
+            <div class="form-group" style="margin-top: 8px;">
+                <label>風花圖色帶:</label>
+                <select id="freqColorscaleSel" class="ctrl-select" style="width: 100%;">
+                    <option value="Plasma">Plasma</option>
+                    <option value="Viridis">Viridis</option>
+                    <option value="Turbo">Turbo</option>
+                    <option value="Jet">Jet</option>
+                    <option value="RdYlGn_r">RdYlGn</option>
+                    <option value="Blues">Blues</option>
+                    <option value="Reds">Reds</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+                <label>濃度圖色帶:</label>
+                <select id="concColorscaleSel" class="ctrl-select" style="width: 100%;">
+                    <option value="Turbo">Turbo (推薦)</option>
+                    <option value="Jet">Jet</option>
+                    <option value="Viridis">Viridis</option>
+                    <option value="Plasma">Plasma</option>
+                    <option value="RdYlGn_r">RdYlGn</option>
+                    <option value="Blues">Blues</option>
+                    <option value="Reds">Reds</option>
+                </select>
+            </div>
+            <div class="form-group checkbox-group" style="margin-top: 12px;">
+                <input type="checkbox" id="showFreqLabels" checked>
+                <label for="showFreqLabels">顯示風花圖頻率 (10%, 20%...)</label>
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="showConcLabels" checked>
+                <label for="showConcLabels">顯示污染濃度標籤 (m/s)</label>
+            </div>
+
+            <button type="button" class="btn btn-secondary" id="applySettingsBtn"
+                style="width:100%;margin-top:8px;">套用設定</button>
+
+            <hr>
+
+            <h3>&#128190; 專案儲存</h3>
+            <div class="form-group">
+                <label>專案名稱:</label>
+                <input type="text" id="projectNameInput" placeholder="例如：台中2024風玫瑰圖">
+            </div>
+
+            <button type="button" class="btn btn-primary" id="confirmSaveBtn" style="width:100%;">&#128190;
+                儲存目前專案</button>
+
+            <hr>
+
+            <h3>🤖 AI 分析 (可選)</h3>
+            <p class="hint">呼叫 Gemini 進行污染源方位解析與報告建議。</p>
+            <div class="form-group">
+                <label>Gemini API Key:</label>
+                <input type="password" id="apiKeyInput" placeholder="輸入 API Key">
+            </div>
+            <button type="button" class="btn btn-ai" id="aiBtn" onclick="startAIAnalysis()" style="width:100%;">🧠 執行 AI 分析</button>
+
+            <hr>
+
+            <h3>&#128640; 資料預覽</h3>
+            <div id="dataPreview" style="overflow-x: auto; background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 4px; min-height: 250px !important;">
+                <p class="project-empty">尚未載入資料</p>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Toast -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="../site-config.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

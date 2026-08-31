@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 文件工具平台</title>
+    <link rel="stylesheet" href="portal.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 背景裝飾 -->
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <header class="portal-header">
+        <div class="header-content">
+            <h1>🛠️ AI 文件工具平台</h1>
+            <p class="subtitle">智能化文件處理，提升工作效率</p>
+        </div>
+    </header>
+
+    <main class="portal-main">
+        <div class="tools-grid" id="toolsGrid">
+
+            <!-- AI 智能校對 -->
+            <a href="./proofreader/" class="tool-card" id="card-proofreader">
+                <div class="card-icon">
+                    <span class="icon-emoji">📝</span>
+                    <div class="icon-glow glow-blue"></div>
+                </div>
+                <h3 class="card-title">AI 智能校對</h3>
+                <p class="card-desc">多檔校稿分析，支援環工專業術語與數據一致性檢查</p>
+                <div class="card-tag tag-ai">AI 驅動</div>
+            </a>
+
+            <!-- PDF 處理工坊 -->
+            <a href="./word-to-pdf/" class="tool-card" id="card-word-to-pdf">
+                <div class="card-icon">
+                    <span class="icon-emoji">📄</span>
+                    <div class="icon-glow glow-red"></div>
+                </div>
+                <h3 class="card-title">PDF 處理工坊</h3>
+                <p class="card-desc">批量轉換 Word 文件為 PDF，並提供 PDF 權限破解與密碼移除服務</p>
+                <div class="card-tag tag-convert">文檔處理</div>
+            </a>
+
+            <!-- AI 辨識手寫逐字稿 -->
+            <a href="./transcript/" class="tool-card" id="card-transcript">
+                <div class="card-icon">
+                    <span class="icon-emoji">✍️</span>
+                    <div class="icon-glow glow-green"></div>
+                </div>
+                <h3 class="card-title">AI 辨識手寫逐字稿</h3>
+                <p class="card-desc">深度識別手寫原稿，輔以音檔/YouTube 修正錯漏字</p>
+                <div class="card-tag tag-ai">AI 驅動</div>
+            </a>
+
+            <!-- 本地 OCR 文字辨識 -->
+            <a href="./ocr/" class="tool-card" id="card-ocr">
+                <div class="card-icon">
+                    <span class="icon-emoji">🔍</span>
+                    <div class="icon-glow glow-blue"></div>
+                </div>
+                <h3 class="card-title">本地 OCR 文字辨識</h3>
+                <p class="card-desc">使用內地 OCR 引擎提取圖片文字，節省 AI 配額且隱私安全</p>
+                <div class="card-tag tag-local">本地執行</div>
+            </a>
+
+            <!-- GIS 等濃度/高程分析 -->
+            <a href="./gis/" class="tool-card" id="card-gis">
+                <div class="card-icon">
+                    <span class="icon-emoji">🗺️</span>
+                    <div class="icon-glow glow-teal" style="background:#00e5cc;"></div>
+                </div>
+                <h3 class="card-title">等濃度/高程分析</h3>
+                <p class="card-desc">匯入數值與座標資料，自動生成等值線圖及 AI 分析報告</p>
+                <div class="card-tag tag-local" style="background:rgba(0,229,204,0.15); color:#00e5cc; border:1px solid rgba(0,229,204,0.3);">空間分析</div>
+            </a>
+
+            <!-- 污染風花圖分析 -->
+            <a href="./windrose/" class="tool-card" id="card-windrose">
+                <div class="card-icon">
+                    <span class="icon-emoji">🌬️</span>
+                    <div class="icon-glow" style="background:#a78bfa;"></div>
+                </div>
+                <h3 class="card-title">污染風花圖分析</h3>
+                <p class="card-desc">繪製污染風花圖與濃度風花圖，支援專案儲存與 PNG 匯出</p>
+                <div class="card-tag" style="background:rgba(167,139,250,0.15); color:#a78bfa; border:1px solid rgba(167,139,250,0.3);">視覺化分析</div>
+            </a>
+
+            <!-- 相片智能篩選 -->
+            <a href="./photo-filter/" class="tool-card" id="card-photo-filter">
+                <div class="card-icon">
+                    <span class="icon-emoji">🖼️</span>
+                    <div class="icon-glow" style="background:#f59e0b;"></div>
+                </div>
+                <h3 class="card-title">相片智能篩選</h3>
+                <p class="card-desc">自動偵測模糊、過曝、重複照片，批量分類並匯出 CSV 報表</p>
+                <div class="card-tag" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3);">影像分析</div>
+            </a>
+
+            <!-- 污染動態分析儀表板 -->
+            <a href="./pollution-tracker/" class="tool-card" id="card-pollution-tracker">
+                <div class="card-icon">
+                    <span class="icon-emoji">🔬</span>
+                    <div class="icon-glow" style="background:#ff8c42;"></div>
+                </div>
+                <h3 class="card-title">污染來源追蹤系統</h3>
+                <p class="card-desc">地圖式污染來源判讀系統，動態呈現污染來源方向、距離與熱度圖</p>
+                <div class="card-tag" style="background:rgba(255,140,66,0.15); color:#ff8c42; border:1px solid rgba(255,140,66,0.3);">動態追蹤</div>
+            </a>
+
+            <!-- 更多工具的佔位卡 (未來擴充) -->
+            <div class="tool-card card-coming-soon" id="card-coming-soon">
+                <div class="card-icon">
+                    <span class="icon-emoji">🚀</span>
+                    <div class="icon-glow glow-purple"></div>
+                </div>
+                <h3 class="card-title">更多工具</h3>
+                <p class="card-desc">持續開發中，敬請期待更多智能文件處理功能</p>
+                <div class="card-tag tag-soon">即將推出</div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="portal-footer">
+        <p>AI 文件工具平台 &copy; 2026 | <span id="versionTag">v2.1 (待載入)</span></p>
+    </footer>
+
+    <script src="site-config.js"></script>
+    <script>
+        // 同源部署會顯示後端版本；GitHub Pages 純前端則顯示待連接狀態。
+        const versionTag = document.getElementById('versionTag');
+        const timestamp = new Date().getTime();
+
+        const isGithubPages = window.location.hostname.endsWith('github.io');
+        const hasRemoteBackend = Boolean(window.AI_TOOLS_CONFIG?.apiBaseUrl);
+        if (isGithubPages && !hasRemoteBackend) {
+            versionTag.textContent = 'GitHub Pages 前端｜待連接後端';
+            versionTag.style.color = '#ffd166';
+        } else {
+            fetch(`/api/version?t=${timestamp}`)
+                .then(res => res.json())
+                .then(data => {
+                    versionTag.textContent = `v${data.version}`;
+                })
+                .catch(() => {
+                    versionTag.textContent = '後端尚未連線';
+                    versionTag.style.color = '#ff5252';
+                });
+        }
+    </script>
+</body>
+</html>

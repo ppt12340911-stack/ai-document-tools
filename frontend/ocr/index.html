@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地 OCR 文字辨識 | AI 文件工具平台</title>
+    <meta name="description" content="使用 RapidOCR 或 EasyOCR 從圖片中提取文字，支援中文與英文辨識，完全不消耗 API 配額。">
+    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 背景裝飾 -->
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="container">
+        <a href="../" class="back-btn" id="backBtn">← 返回工具平台</a>
+        
+        <header class="page-header">
+            <h1>🔍 本地 <span class="gradient-text">OCR 文字辨識</span></h1>
+            <p class="page-subtitle">使用本地引擎或雲端 AI 提取文件文字，即刻轉換為數位內容</p>
+        </header>
+
+        <!-- ===== API Key 配置 (新) ===== -->
+        <div class="api-key-container">
+            <label for="apiKey">Gemini API Key (選填)</label>
+            <div class="api-key-wrapper">
+                <input type="password" id="apiKey" placeholder="輸入 Key 可切換至雲端高精準度辨識，不輸入則使用本地引擎" />
+                <button type="button" id="toggleApiBtn" class="toggle-btn" title="顯示/隱藏">👁️</button>
+            </div>
+            <p class="api-hint">💡 留空將使用本地不耗配額引擎；輸入則使用精準的 Gemini AI 辨識。</p>
+        </div>
+
+        <!-- ===== 本地引擎選擇 (新) ===== -->
+        <div class="engine-selection-container" id="engineSelection">
+            <label>本地辨識引擎選擇</label>
+            <div class="engine-options">
+                <label class="engine-option" title="準確度高，支援繁體中文與複雜版面">
+                    <input type="radio" name="ocrEngine" value="tesseract" checked>
+                    <div class="engine-card">
+                        <div class="engine-title">RapidOCR</div>
+                        <div class="engine-desc">高精準度 (推薦)</div>
+                    </div>
+                </label>
+                <label class="engine-option" title="適合手寫字或複雜背景">
+                    <input type="radio" name="ocrEngine" value="easyocr">
+                    <div class="engine-card">
+                        <div class="engine-title">EasyOCR</div>
+                        <div class="engine-desc">處理複雜版面與手寫文字</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- ===== 上傳區塊 ===== -->
+        <section class="upload-section" id="dropZone">
+            <div class="upload-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="12" y1="18" x2="12" y2="12"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
+            </div>
+            <p class="upload-title">點擊、拖放檔案或直接貼上 (Ctrl+V)</p>
+            <p class="upload-desc">支援 JPG、PNG、WebP、PDF 格式，支援直接貼上截圖<br>首次執行本地辨識將下載模型 (約 100MB)</p>
+            <input type="file" id="imageInput" multiple accept=".jpg,.jpeg,.png,.webp,.pdf" style="display: none;">
+        </section>
+
+        <!-- ===== 已選檔案列表 ===== -->
+        <div class="file-preview-grid" id="filePreviewGrid"></div>
+
+        <!-- ===== 動作按鈕 ===== -->
+        <div class="action-bar" id="actionBar" style="display: none;">
+            <button class="btn btn-primary" id="extractBtn" disabled>
+                <span class="btn-icon">⚡</span> 開始提取文字
+            </button>
+            <button class="btn btn-outline btn-clear" id="clearBtn">
+                <span class="btn-icon">🗑️</span> 清除全部
+            </button>
+        </div>
+
+        <!-- ===== 處理中狀態 ===== -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p id="loadingText">正在處理中... 第一次辨識需下載核心模型，請保持網路連通並耐心等待。</p>
+            <div id="analyzeTimer" class="analyze-timer" style="display: none;">已處理: 0.0 秒</div>
+            <div class="progress-bar-wrapper">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+
+        <!-- ===== 結果區塊 ===== -->
+        <div class="results" id="results">
+            <div class="results-header">
+                <h2>📜 提取結果 <span id="methodBadge" class="badge local">本地辨識</span></h2>
+                <div class="tools-bar">
+                    <button class="btn-tool" id="copyBtn" title="複製到剪貼簿">
+                        <span>📋</span> 複製文字
+                    </button>
+                    <button class="btn-tool" id="downloadBtn" title="下載為文字檔">
+                        <span>💾</span> 下載 .txt
+                    </button>
+                    <button class="btn-tool btn-tool-accent" id="sendBtn" title="傳送至 AI 校對工具">
+                        <span>✨</span> 送往 AI 校對
+                    </button>
+                </div>
+            </div>
+            <div class="result-content-wrapper">
+                <textarea id="resultText" class="result-textarea" placeholder="辨識結果將顯示於此..."></textarea>
+            </div>
+            <div class="result-stats" id="resultStats"></div>
+        </div>
+
+        <!-- ===== 使用提示 ===== -->
+        <div class="tips-section" id="tipsSection">
+            <h3>💡 使用提示</h3>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <div class="tip-icon">📸</div>
+                    <div class="tip-text">
+                        <strong>拍攝清晰</strong>
+                        <p>確保文字清晰、光線充足，避免模糊與陰影</p>
+                    </div>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">🌐</div>
+                    <div class="tip-text">
+                        <strong>支援語言</strong>
+                        <p>支援繁體中文與英文混合辨識</p>
+                    </div>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">🔒</div>
+                    <div class="tip-text">
+                        <strong>隱私安全</strong>
+                        <p>所有辨識皆在本地執行，資料不會上傳雲端</p>
+                    </div>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">⚡</div>
+                    <div class="tip-text">
+                        <strong>零配額消耗</strong>
+                        <p>不消耗 Gemini API 配額，可無限次使用</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../site-config.js"></script>
+    <script src="script.js?v=3"></script>
+</body>
+</html>

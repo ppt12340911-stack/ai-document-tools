@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 智能校對 - AI 文件工具平台</title>
+    <meta name="description" content="AI 驅動的文件校對系統，支援環境工程專業術語檢查、數據一致性比對">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- 頂部工具列 -->
+    <div class="top-bar" id="topBar">
+        <div class="top-bar-left">
+            <a href="../" class="back-btn" id="backBtn">← 返回平台</a>
+            <span class="app-title">📝 AI 智能校對</span>
+        </div>
+        <div class="top-bar-center">
+            <input type="password" class="api-input" id="apiKeyInput" placeholder="Gemini API Key（選填，可啟用語意分析）">
+        </div>
+        <div class="top-bar-right">
+            <button class="btn btn-outline" id="exportBtn" disabled>📊 匯出報告</button>
+            <button class="btn btn-primary" id="analyzeBtn" disabled>🔍 開始校稿</button>
+        </div>
+    </div>
+
+    <!-- 三欄工作區 -->
+    <div class="workspace" id="workspace">
+
+        <!-- 左欄：檔案列表 -->
+        <div class="panel-left" id="panelLeft">
+            <div class="panel-header">📁 文件管理</div>
+
+            <div class="upload-zone">
+                <div class="drop-area" id="dropArea">
+                    <div class="icon">📄</div>
+                    <div class="label">拖放 PDF / Word 檔案<br>或點擊上傳</div>
+                    <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx">
+                </div>
+            </div>
+
+            <!-- 新增檔案列表容器 -->
+            <div id="fileList" class="file-list"></div>
+
+            <div class="panel-header" style="margin-top: 1.5rem;">⚙️ 校稿設定</div>
+            <div class="settings-group" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin: 0 1rem;">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="useWordCheck" checked>
+                    <span class="checkbox-label">🏢 啟用 Word 專業校訂</span>
+                </label>
+                <label class="checkbox-container" style="margin-top: 0.8rem;">
+                    <input type="checkbox" id="useCkipCheck" checked>
+                    <span class="checkbox-label">🧪 啟用 CKIP 斷詞偵測</span>
+                </label>
+            </div>
+
+        </div>
+
+        <!-- 中欄：原文檢視器 -->
+        <div class="panel-center" id="panelCenter">
+            <div class="page-nav" id="pageNav" style="display:none">
+                <button id="prevPageBtn" disabled>◀ 上一頁</button>
+                <span class="page-info" id="pageInfo">第 1 頁 / 共 1 頁</span>
+                <button id="nextPageBtn" disabled>下一頁 ▶</button>
+            </div>
+            <div class="document-viewer" id="documentViewer">
+                <div class="viewer-placeholder">
+                    <div class="ph-icon">📄</div>
+                    <div class="ph-text">上傳文件後即可開始校對</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右欄：問題清單 -->
+        <div class="panel-right" id="panelRight">
+            <div class="findings-header">
+                <span>⚠️ 問題清單</span>
+                <span class="count" id="findingsCount">0</span>
+            </div>
+
+            <div class="filter-bar" id="filterBar">
+                <span class="filter-chip chip-all active" data-type="all">全部</span>
+                <span class="filter-chip chip-error active" data-type="error">❌ 錯字</span>
+                <span class="filter-chip chip-inconsistency active" data-type="inconsistency">⚠️ 一致性</span>
+                <span class="filter-chip chip-suggestion active" data-type="suggestion">💡 建議</span>
+                <span class="filter-chip chip-terminology active" data-type="terminology">🔬 術語</span>
+            </div>
+
+            <div class="findings-list" id="findingsList">
+                <!-- 動態渲染問題卡片 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入中遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-timer" id="loadingTimer">0s</div>
+        <div class="loading-text" id="loadingText">正在解析文件並進行校對分析...</div>
+    </div>
+
+    <!-- 狀態列 -->
+    <div class="status-bar" id="statusBar">
+        <span id="statusLeft">就緒</span>
+        <span id="statusRight">AI 文件工具平台 v2.1</span>
+    </div>
+
+    <script src="../site-config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

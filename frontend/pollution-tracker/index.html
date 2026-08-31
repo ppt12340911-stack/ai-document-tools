@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>污染來源追蹤系統</title>
+    <!-- 引入共用樣式 -->
+    <link rel="stylesheet" href="../portal.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- html2canvas for map screenshot -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="portal-nav">
+        <a href="../" class="nav-logo">⬅️ 回首頁</a>
+        <div class="nav-title">🔬 污染來源追蹤系統</div>
+    </nav>
+
+    <div class="dashboard-layout">
+        <!-- 左側控制面板 -->
+        <aside class="sidebar">
+            <!-- 上傳區 -->
+            <div class="panel">
+                <h3>📂 資料上傳</h3>
+                <div class="upload-area" id="dropZone">
+                    <p>拖曳 CSV 檔案或點擊上傳</p>
+                    <input type="file" id="csvInput" accept=".csv" hidden>
+                    <button type="button" class="btn btn-cyan">選擇檔案</button>
+                </div>
+                
+                <div id="mappingSection" style="display:none; margin-top:15px;">
+                    <div class="form-group">
+                        <label>時間欄位:</label>
+                        <select id="timeColSel"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>風向欄位 (0-360):</label>
+                        <select id="dirColSel"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>風速欄位 (m/s):</label>
+                        <select id="speedColSel"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>濃度欄位:</label>
+                        <select id="concColSel"></select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 監測站設定 -->
+            <div class="panel">
+                <h3>📍 監測站設定</h3>
+                <p class="hint" style="margin-bottom: 10px;">請手動輸入監測站座標，或在地圖上點擊設定。預設輸入為 TWD97 座標，系統會自動轉換為 WGS84 經緯度。</p>
+                <div class="form-group">
+                    <label>X 座標 / 經度:</label>
+                    <input type="number" id="stationX" placeholder="例如: 250000 或 121.5" step="any">
+                </div>
+                <div class="form-group">
+                    <label>Y 座標 / 緯度:</label>
+                    <input type="number" id="stationY" placeholder="例如: 2700000 或 25.0" step="any">
+                </div>
+                <button type="button" class="btn btn-secondary" id="setStationBtn" style="width: 100%; margin-top: 5px;">更新監測站位置</button>
+                <div class="checkbox-group" style="margin-top: 10px;">
+                    <input type="checkbox" id="pickMapMode">
+                    <label for="pickMapMode">🗺️ 在地圖上點擊設定</label>
+                </div>
+            </div>
+
+            <!-- 分析設定 -->
+            <div class="panel">
+                <h3>🎛️ 分析設定</h3>
+                <div class="form-group">
+                    <label>追蹤時段長度 (小時):</label>
+                    <input type="number" id="durationHours" value="1" min="0.1" step="0.1">
+                    <p class="hint">決定逆軌跡追溯的時間長度與動態擴散圓範圍</p>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="showTrajectories" checked>
+                    <label for="showTrajectories">顯示動態逆軌跡線段</label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="showRadius">
+                    <label for="showRadius">顯示動態擴散圓 (隨風速變動)</label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="showHeatmap" checked>
+                    <label for="showHeatmap">顯示熱度圖疊層</label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="showNorth" checked>
+                    <label for="showNorth">🧭 顯示指北針</label>
+                </div>
+            </div>
+
+            <!-- 環境搜尋範圍 -->
+            <div class="panel">
+                <h3>🔍 環境搜尋範圍</h3>
+                <div class="form-group">
+                    <label>固定搜尋半徑 (km):</label>
+                    <input type="number" id="fixedRadiusKm" value="5" min="0.1" step="0.5">
+                    <p class="hint">在地圖上顯示固定的環狀評估範圍</p>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="showFixedRadius">
+                    <label for="showFixedRadius">顯示固定半徑虛線</label>
+                </div>
+            </div>
+
+            <!-- AI 分析 -->
+            <div class="panel">
+                <h3>🤖 AI 深度分析 (可選)</h3>
+                <div class="form-group">
+                    <input type="password" id="apiKeyInput" placeholder="請輸入 Gemini API Key">
+                </div>
+                <button type="button" class="btn btn-ai" id="aiBtn" style="width:100%;" disabled>🧠 生成分析報告</button>
+            </div>
+
+            <div class="panel">
+                <h3>📥 匯出成果</h3>
+                <button class="btn btn-secondary" style="width: 100%;" onclick="exportMapImage()">儲存地圖截圖</button>
+                <button class="btn btn-primary" style="width: 100%; margin-top: 5px; background:var(--accent-cyan); color:#111;"
+                    onclick="exportProfessionalImage()">📥 專業 GIS 導出 (帶座標軸)</button>
+            </div>
+
+            <!-- 高污染事件 -->
+            <div class="panel" style="border-bottom:none;">
+                <h3>🚨 高污染事件 (<span id="eventCount">0</span>)</h3>
+                <div class="event-list" id="eventList">
+                    <div class="chart-placeholder-mini"><p>等待分析...</p></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主視圖區 -->
+        <main class="main-content">
+            <!-- 地圖控制列 -->
+            <div class="map-controls">
+                <span>底圖: </span>
+                <select id="basemap-select">
+                    <option value="dark" selected>深色底圖 (CartoDB Dark)</option>
+                    <option value="osm">OpenStreetMap</option>
+                    <option value="satellite">ESRI 衛星圖</option>
+                </select>
+                <button class="btn btn-primary" id="startAnalysisBtn" style="margin-left:auto;" disabled>⚡ 執行追蹤分析</button>
+            </div>
+            
+            <!-- 地圖容器 -->
+            <div id="map" class="map-container">
+                <!-- 標題框 (浮動) -->
+                <div id="map-title-box" class="map-overlay-title" style="display:none;"></div>
+                <!-- 圖例框 (浮動) -->
+                <div id="map-legend-box" class="map-overlay-legend" style="display:none;"></div>
+            </div>
+
+            <!-- 播放控制列 -->
+            <div class="player-bar" id="playerBar" style="display:none;">
+                <div class="player-controls">
+                    <button class="btn-icon" id="playBtn" title="播放">▶️</button>
+                    <button class="btn-icon" id="pauseBtn" title="暫停" style="display:none;">⏸️</button>
+                    <button class="btn-icon" id="stopBtn" title="停止">⏹️</button>
+                </div>
+                
+                <div class="slider-container">
+                    <div class="slider-info">
+                        <span id="sliderLabel" class="slider-label">等待載入</span>
+                        <span id="frameInfo" class="frame-info">0 / 0</span>
+                    </div>
+                    <input type="range" id="timeSlider" class="custom-slider" min="0" max="0" value="0">
+                </div>
+                
+                <div class="player-settings">
+                    <select id="playSpeedSel" class="speed-sel">
+                        <option value="1000">1x (1秒/幀)</option>
+                        <option value="500">2x (0.5秒/幀)</option>
+                        <option value="200" selected>5x (0.2秒/幀)</option>
+                        <option value="100">10x (0.1秒/幀)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- AI 分析報告遮罩 -->
+            <div class="ai-report-overlay" id="aiReportOverlay" style="display:none;">
+                <div class="ai-report-modal">
+                    <div class="ai-report-header">
+                        <h3>🤖 AI 污染來源分析報告</h3>
+                        <button class="btn-icon close-btn" onclick="closeAiReport()">❌</button>
+                    </div>
+                    <div class="ai-report-content" id="aiReportContent">
+                        <!-- Markdown 生成內容 -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Toast 通知 -->
+            <div id="toastContainer" class="toast-container"></div>
+        </main>
+    </div>
+
+    <!-- 專業匯出預覽 Modal -->
+    <div id="export-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🖼️ 專業 GIS 匯出預覽</h3>
+                <button class="close-btn" onclick="closeExportModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <img id="export-preview-img" src="" alt="Export Preview">
+                <p class="hint" style="margin-top:10px;">包含 TWD97 座標刻度軸與指北針，適合用於正式報表。</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="downloadExportImage()">💾 下載此圖</button>
+                <button class="btn btn-secondary" onclick="closeExportModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet.heat -->
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="../site-config.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
