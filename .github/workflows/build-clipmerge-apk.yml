@@ -30,18 +30,21 @@ jobs:
 
       - name: Prepare project
         run: |
-          rm -rf .chatgpt-build/clipmerge
-          mkdir -p .chatgpt-build/clipmerge
-          unzip -q .chatgpt-build/clipmerge_project.zip -d .chatgpt-build/clipmerge
+          cat .chatgpt-build/clipmerge/chunk*.txt > /tmp/clipmerge_project.b64
+          base64 -d /tmp/clipmerge_project.b64 > /tmp/clipmerge_project.zip
+          unzip -t /tmp/clipmerge_project.zip
+          rm -rf .chatgpt-build/clipmerge-src
+          mkdir -p .chatgpt-build/clipmerge-src
+          unzip -q /tmp/clipmerge_project.zip -d .chatgpt-build/clipmerge-src
 
       - name: Build debug APK
-        working-directory: .chatgpt-build/clipmerge
+        working-directory: .chatgpt-build/clipmerge-src
         run: gradle --no-daemon --stacktrace :app:assembleDebug
 
       - name: Copy APK
         run: |
           mkdir -p out
-          cp .chatgpt-build/clipmerge/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio.apk
+          cp .chatgpt-build/clipmerge-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
