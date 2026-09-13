@@ -1,0 +1,65 @@
+name: Build Peipei V4 APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'peipei-v4-part-*.b64'
+      - '.github/workflows/peipei-v4-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 9.6.0
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Reassemble project
+        run: |
+          cat peipei-v4-part-00.b64 peipei-v4-part-01.b64 peipei-v4-part-02.b64 peipei-v4-part-03.b64 > peipei-v4-project.b64
+          base64 -d peipei-v4-project.b64 > peipei-v4-project.tar.bz2
+          echo "fcb6ff3ede1f791f5cd0b8509a7ad305aee66e6a0d9e2feaf0e5fb599c7d4449  peipei-v4-project.tar.bz2" | sha256sum -c -
+          mkdir project
+          tar -xjf peipei-v4-project.tar.bz2 -C project
+          echo "PROJECT_DIR=$(find project -mindepth 1 -maxdepth 1 -type d | head -n 1)" >> "$GITHUB_ENV"
+
+      - name: Verify Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          test -d "$ANDROID_HOME/platforms/android-37"
+          test -d "$ANDROID_HOME/build-tools/36.0.0" || test -d "$ANDROID_HOME/build-tools/37.0.0"
+
+      - name: Build debug APK
+        run: |
+          cd "$PROJECT_DIR"
+          gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Collect APK
+        run: |
+          cp "$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk" peipei-v4.apk
+          sha256sum peipei-v4.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: peipei-v4-apk
+          path: peipei-v4.apk
+          if-no-files-found: error
+          retention-days: 7
