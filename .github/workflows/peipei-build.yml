@@ -26,9 +26,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Set up Gradle 9.6.0
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -43,10 +40,12 @@ jobs:
           tar -xjf peipei-project.tar.bz2 -C project
           echo "PROJECT_DIR=$(find project -mindepth 1 -maxdepth 1 -type d | head -n 1)" >> "$GITHUB_ENV"
 
-      - name: Install Android SDK platform
+      - name: Verify Android SDK
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37" "build-tools;36.0.0"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          test -d "$ANDROID_HOME/platforms/android-37" || test -d "$ANDROID_HOME/platforms/android-37.0"
+          ls -1 "$ANDROID_HOME/platforms" | tail -20
+          ls -1 "$ANDROID_HOME/build-tools" | tail -20
 
       - name: Build debug APK
         run: |
