@@ -37,6 +37,7 @@ jobs:
           unzip -q -o /tmp/clipmerge_project.zip -d .chatgpt-build/clipmerge-src || true
           rm -f .chatgpt-build/clipmerge-src/app/src/main/res/drawable-nodpi/app_cover.jpg
           cp .chatgpt-build/clipmerge-src/app/src/main/res/drawable/ic_launcher.xml .chatgpt-build/clipmerge-src/app/src/main/res/drawable/app_cover.xml
+          printf '\nandroid.builtInKotlin=false\nandroid.newDsl=false\n' >> .chatgpt-build/clipmerge-src/gradle.properties
           test -f .chatgpt-build/clipmerge-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
           test -f .chatgpt-build/clipmerge-src/app/build.gradle.kts
 
