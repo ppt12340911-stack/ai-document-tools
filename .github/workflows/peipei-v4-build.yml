@@ -40,11 +40,15 @@ jobs:
           tar -xjf peipei-v4-project.tar.bz2 -C project
           echo "PROJECT_DIR=$(find project -mindepth 1 -maxdepth 1 -type d | head -n 1)" >> "$GITHUB_ENV"
 
-      - name: Verify Android SDK
+      - name: Ensure Android SDK 37
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          test -d "$ANDROID_HOME/platforms/android-37"
-          test -d "$ANDROID_HOME/build-tools/36.0.0" || test -d "$ANDROID_HOME/build-tools/37.0.0"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
+          fi
+          echo "sdkmanager=$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-37" "build-tools;37.0.0"
 
       - name: Build debug APK
         run: |
