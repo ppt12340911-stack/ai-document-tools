@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'peipei-build.b64'
+      - 'peipei-part-*.b64'
       - '.github/workflows/peipei-build.yml'
 
 permissions:
@@ -31,11 +31,13 @@ jobs:
         with:
           gradle-version: '9.6.0'
 
-      - name: Decode project
+      - name: Reassemble project
         run: |
-          base64 -d peipei-build.b64 > peipei.zip
+          cat peipei-part-00.b64 peipei-part-01.b64 peipei-part-02.b64 > peipei-project.b64
+          base64 -d peipei-project.b64 > peipei-project.tar.bz2
+          echo "b9c02fa6446c8a062d83e8cecec109c8034be3d48ce75cb7fd76dc4b2a63ea32  peipei-project.tar.bz2" | sha256sum -c -
           mkdir project
-          unzip -q peipei.zip -d project
+          tar -xjf peipei-project.tar.bz2 -C project
           echo "PROJECT_DIR=$(find project -mindepth 1 -maxdepth 1 -type d | head -n 1)" >> "$GITHUB_ENV"
 
       - name: Install Android SDK platform
@@ -51,6 +53,7 @@ jobs:
       - name: Collect APK
         run: |
           cp "$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk" peipei-v3.apk
+          sha256sum peipei-v3.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
