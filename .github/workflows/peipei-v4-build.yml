@@ -38,17 +38,16 @@ jobs:
           echo "fcb6ff3ede1f791f5cd0b8509a7ad305aee66e6a0d9e2feaf0e5fb599c7d4449  peipei-v4-project.tar.bz2" | sha256sum -c -
           mkdir project
           tar -xjf peipei-v4-project.tar.bz2 -C project
-          echo "PROJECT_DIR=$(find project -mindepth 1 -maxdepth 1 -type d | head -n 1)" >> "$GITHUB_ENV"
+          PROJECT_DIR=$(find project -mindepth 1 -maxdepth 1 -type d | head -n 1)
+          sed -i 's/compileSdk = 37/compileSdk = 36/' "$PROJECT_DIR/app/build.gradle.kts"
+          sed -i 's/targetSdk = 37/targetSdk = 36/' "$PROJECT_DIR/app/build.gradle.kts"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
-      - name: Ensure Android SDK 37
+      - name: Verify Android SDK 36
         run: |
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
-          fi
-          echo "sdkmanager=$SDKMANAGER"
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" "platforms;android-37" "build-tools;37.0.0"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          test -d "$ANDROID_HOME/platforms/android-36"
+          test -d "$ANDROID_HOME/build-tools/36.0.0" || test -d "$ANDROID_HOME/build-tools/36.1.0" || test -d "$ANDROID_HOME/build-tools/37.0.0"
 
       - name: Build debug APK
         run: |
