@@ -1,0 +1,1 @@
+Use binary blob upload path for v2.3 project archive.
