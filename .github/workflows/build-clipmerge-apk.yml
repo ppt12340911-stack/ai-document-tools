@@ -36,6 +36,8 @@ jobs:
           rm -rf .chatgpt-build/clipmerge-src
           mkdir -p .chatgpt-build/clipmerge-src
           unzip -q -o /tmp/clipmerge_project.zip -d .chatgpt-build/clipmerge-src
+          # Fix ScrollView child LayoutParams for Android/Kotlin compilation.
+          sed -i 's/ScrollView\.LayoutParams/FrameLayout.LayoutParams/g' .chatgpt-build/clipmerge-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
           cat > .chatgpt-build/clipmerge-src/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application") version "9.4.0" apply false
