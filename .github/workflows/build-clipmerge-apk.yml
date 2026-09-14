@@ -30,8 +30,7 @@ jobs:
 
       - name: Prepare project
         run: |
-          cp .chatgpt-build/clipmerge/v23_project.b64 /tmp/clipmerge_project.b64
-          base64 -d /tmp/clipmerge_project.b64 > /tmp/clipmerge_project.zip
+          cp .chatgpt-build/clipmerge/v23_project.zip /tmp/clipmerge_project.zip
           unzip -t /tmp/clipmerge_project.zip
           rm -rf .chatgpt-build/clipmerge-src
           mkdir -p .chatgpt-build/clipmerge-src
