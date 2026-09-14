@@ -30,8 +30,9 @@ jobs:
 
       - name: Prepare project
         run: |
-          cat .chatgpt-build/clipmerge/chunk00.txt .chatgpt-build/clipmerge/chunk01.txt .chatgpt-build/clipmerge/chunk02.txt > /tmp/clipmerge_project.b64
+          cp .chatgpt-build/clipmerge/v21_project.b64 /tmp/clipmerge_project.b64
           base64 -d /tmp/clipmerge_project.b64 > /tmp/clipmerge_project.zip
+          unzip -t /tmp/clipmerge_project.zip
           rm -rf .chatgpt-build/clipmerge-src
           mkdir -p .chatgpt-build/clipmerge-src
           unzip -q -o /tmp/clipmerge_project.zip -d .chatgpt-build/clipmerge-src
