@@ -1,12 +1,13 @@
-name: Build Peipei V4 APK
+name: Build Peipei V4.2 Free Voice APK
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - peipei-v42-free-build
     paths:
       - 'peipei-v4-part-*.b64'
+      - 'peipei-v42-*'
       - '.github/workflows/peipei-v4-build.yml'
 
 permissions:
@@ -31,7 +32,7 @@ jobs:
         with:
           gradle-version: '9.6.0'
 
-      - name: Reassemble and patch project
+      - name: Reassemble V4 base project
         run: |
           cat peipei-v4-part-00.b64 peipei-v4-part-01.b64 peipei-v4-part-02.b64 peipei-v4-part-03.b64 > peipei-v4-project.b64
           base64 -d peipei-v4-project.b64 > peipei-v4-project.tar.bz2
@@ -39,13 +40,52 @@ jobs:
           mkdir project
           tar -xjf peipei-v4-project.tar.bz2 -C project
           PROJECT_DIR=$(find project -mindepth 1 -maxdepth 1 -type d | head -n 1)
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Apply V4.2 free voice patch
+        run: |
+          set -e
           sed -i 's/compileSdk = 37/compileSdk = 36/' "$PROJECT_DIR/app/build.gradle.kts"
           sed -i 's/targetSdk = 37/targetSdk = 36/' "$PROJECT_DIR/app/build.gradle.kts"
-          STRINGS="$PROJECT_DIR/app/src/main/res/values/strings.xml"
-          if ! grep -q 'accessibility_description' "$STRINGS"; then
-            sed -i 's#</resources>#    <string name="accessibility_description">讓沛沛同學執行返回、首頁、滑動、點擊、輸入文字與語音巨集等手機操作。</string>\n</resources>#' "$STRINGS"
-          fi
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          sed -i 's/versionCode = 4/versionCode = 5/' "$PROJECT_DIR/app/build.gradle.kts"
+          sed -i 's/versionName = "4.0"/versionName = "4.2"/' "$PROJECT_DIR/app/build.gradle.kts"
+
+          mkdir -p "$PROJECT_DIR/app/src/main/res/drawable" "$PROJECT_DIR/app/src/main/res/raw"
+          cp peipei-v42-icon.webp "$PROJECT_DIR/app/src/main/res/drawable/peipei_icon.webp"
+          cp peipei-v42-startup.m4a "$PROJECT_DIR/app/src/main/res/raw/startup_voice.m4a"
+          cp peipei-v42-VoiceCommandService.java "$PROJECT_DIR/app/src/main/java/com/example/voicephonecontroller/VoiceCommandService.java"
+
+          python3 - "$PROJECT_DIR" <<'PY'
+          from pathlib import Path
+          import sys
+          p = Path(sys.argv[1])
+
+          strings = p / 'app/src/main/res/values/strings.xml'
+          s = strings.read_text()
+          s = s.replace('沛沛同學 語音手機控制 V4', '沛沛同學 語音手機控制 V4.2')
+          if 'accessibility_description' not in s:
+              s = s.replace('</resources>', '    <string name="accessibility_description">讓沛沛同學執行返回、首頁、滑動、點擊、輸入文字與語音巨集等手機操作。</string>\n</resources>')
+          strings.write_text(s)
+
+          manifest = p / 'app/src/main/AndroidManifest.xml'
+          m = manifest.read_text()
+          if 'android:icon=' not in m:
+              m = m.replace('android:allowBackup="true"', 'android:allowBackup="true"\n        android:icon="@drawable/peipei_icon"\n        android:roundIcon="@drawable/peipei_icon"')
+          manifest.write_text(m)
+
+          layout = p / 'app/src/main/res/layout/activity_main.xml'
+          l = layout.read_text().replace('語音手機控制 V4', '語音手機控制 V4.2').replace('啟動沛沛同學 V4', '啟動沛沛同學 V4.2')
+          layout.write_text(l)
+
+          main = p / 'app/src/main/java/com/example/voicephonecontroller/MainActivity.java'
+          t = main.read_text().replace('V4 已停止', 'V4.2 已停止')
+          main.write_text(t)
+          PY
+
+          grep -n 'versionCode\|versionName' "$PROJECT_DIR/app/build.gradle.kts"
+          grep -n 'android:icon\|app_name' "$PROJECT_DIR/app/src/main/AndroidManifest.xml" "$PROJECT_DIR/app/src/main/res/values/strings.xml"
+          test -f "$PROJECT_DIR/app/src/main/res/raw/startup_voice.m4a"
+          test -f "$PROJECT_DIR/app/src/main/res/drawable/peipei_icon.webp"
 
       - name: Verify Android SDK 36
         run: |
@@ -60,13 +100,13 @@ jobs:
 
       - name: Collect APK
         run: |
-          cp "$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk" peipei-v4.apk
-          sha256sum peipei-v4.apk
+          cp "$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk" peipei-v42-free.apk
+          sha256sum peipei-v42-free.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: peipei-v4-apk
-          path: peipei-v4.apk
+          name: peipei-v42-free-apk
+          path: peipei-v42-free.apk
           if-no-files-found: error
           retention-days: 7
