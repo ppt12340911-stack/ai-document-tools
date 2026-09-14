@@ -30,130 +30,19 @@ jobs:
 
       - name: Prepare project
         run: |
-          cp .chatgpt-build/clipmerge/v21_project.b64 /tmp/clipmerge_project.b64
+          cp .chatgpt-build/clipmerge/v23_project.b64 /tmp/clipmerge_project.b64
           base64 -d /tmp/clipmerge_project.b64 > /tmp/clipmerge_project.zip
           unzip -t /tmp/clipmerge_project.zip
           rm -rf .chatgpt-build/clipmerge-src
           mkdir -p .chatgpt-build/clipmerge-src
           unzip -q -o /tmp/clipmerge_project.zip -d .chatgpt-build/clipmerge-src
-          sed -i 's/ScrollView\.LayoutParams/FrameLayout.LayoutParams/g' .chatgpt-build/clipmerge-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
-
-          python3 - <<'PY'
-          from pathlib import Path
-
-          root = Path('.chatgpt-build/clipmerge-src')
-          manifest = root / 'app/src/main/AndroidManifest.xml'
-          s = manifest.read_text(encoding='utf-8')
-          s = s.replace(
-              'android:screenOrientation="landscape"\n            android:exported="true"',
-              'android:screenOrientation="landscape"\n            android:launchMode="singleTop"\n            android:exported="true"'
-          )
-          old = '''            <intent-filter>\n                <action android:name="android.intent.action.MAIN" />\n                <category android:name="android.intent.category.LAUNCHER" />\n            </intent-filter>'''
-          new = '''            <intent-filter>\n                <action android:name="android.intent.action.MAIN" />\n                <category android:name="android.intent.category.LAUNCHER" />\n            </intent-filter>\n\n            <intent-filter>\n                <action android:name="android.intent.action.SEND" />\n                <category android:name="android.intent.category.DEFAULT" />\n                <data android:mimeType="text/plain" />\n            </intent-filter>\n\n            <intent-filter>\n                <action android:name="android.intent.action.SEND" />\n                <category android:name="android.intent.category.DEFAULT" />\n                <data android:mimeType="video/*" />\n            </intent-filter>\n\n            <intent-filter>\n                <action android:name="android.intent.action.SEND_MULTIPLE" />\n                <category android:name="android.intent.category.DEFAULT" />\n                <data android:mimeType="video/*" />\n            </intent-filter>'''
-          if old not in s:
-              raise SystemExit('launcher intent-filter not found')
-          manifest.write_text(s.replace(old, new), encoding='utf-8')
-
-          kt = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
-          s = kt.read_text(encoding='utf-8')
-          s = s.replace('text = "ClipMerge Studio  v2.1"', 'text = "ClipMerge Studio  v2.2"')
-          s = s.replace(
-              '        refreshClipList()\n        setStatus("請先加入影片")\n',
-              '        refreshClipList()\n        setStatus("請先加入影片")\n        handleIncomingIntent(intent)\n'
-          )
-          marker = '    private fun pickVideos() {\n'
-          addition = r'''    override fun onNewIntent(intent: Intent?) {
-              super.onNewIntent(intent)
-              if (intent != null) {
-                  setIntent(intent)
-                  handleIncomingIntent(intent)
-              }
-          }
-
-          private fun handleIncomingIntent(incoming: Intent?) {
-              if (incoming == null) return
-              when (incoming.action) {
-                  Intent.ACTION_SEND -> {
-                      val type = incoming.type.orEmpty()
-                      if (type.startsWith("video/")) {
-                          @Suppress("DEPRECATION")
-                          val uri = incoming.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
-                          if (uri != null) addSharedVideos(listOf(uri))
-                      } else {
-                          val text = incoming.getStringExtra(Intent.EXTRA_TEXT)
-                              ?: incoming.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
-                          if (!text.isNullOrBlank()) receiveSharedYouTubeText(text)
-                      }
-                  }
-                  Intent.ACTION_SEND_MULTIPLE -> {
-                      val type = incoming.type.orEmpty()
-                      if (type.startsWith("video/")) {
-                          @Suppress("DEPRECATION")
-                          val uris = incoming.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM).orEmpty()
-                          if (uris.isNotEmpty()) addSharedVideos(uris)
-                      }
-                  }
-              }
-          }
-
-          private fun addSharedVideos(uris: List<Uri>) {
-              var added = 0
-              uris.distinct().forEach { uri ->
-                  try {
-                      val name = queryDisplayName(uri)
-                      val duration = queryDuration(uri)
-                      if (duration > 0L && sources.none { it.uri == uri }) {
-                          sources.add(SourceVideo(uri, name, duration))
-                          added++
-                      }
-                  } catch (_: Exception) {}
-              }
-              if (added > 0) {
-                  refreshSources()
-                  setStatus("已從分享直接加入 $added 支影片")
-                  toast("已加入 $added 支影片")
-              } else {
-                  toast("無法讀取分享的影片檔")
-              }
-          }
-
-          private fun receiveSharedYouTubeText(sharedText: String) {
-              val normalized = normalizeYouTubeUrl(sharedText)
-              if (normalized == null) {
-                  toast("收到分享內容，但無法辨識 YouTube 影片連結")
-                  return
-              }
-              setStatus("已收到 YouTube 分享連結")
-              AlertDialog.Builder(this)
-                  .setTitle("已從 YouTube 接收")
-                  .setMessage(
-                      "連結已自動送進 ClipMerge Studio，不需要複製貼上。\n\n" +
-                      "YouTube 的『分享』只會提供影片網址，不會把影片檔交給其他 APP，因此這個連結本身不能直接放進剪輯時間軸。\n\n" +
-                      "如果是你有權使用的影片，先用 YouTube 官方方式取得影片檔後，可在『檔案／相簿 → 分享 → ClipMerge Studio』直接加入剪輯。"
-                  )
-                  .setPositiveButton("在 YouTube 開啟") { _, _ ->
-                      openYouTubeLink(normalized, preferApp = true)
-                  }
-                  .setNeutralButton("瀏覽器開啟") { _, _ ->
-                      openYouTubeLink(normalized, preferApp = false)
-                  }
-                  .setNegativeButton("關閉", null)
-                  .show()
-          }
-
-          private fun pickVideos() {
-          '''
-          if marker not in s:
-              raise SystemExit('pickVideos marker not found')
-          s = s.replace(marker, addition, 1)
-          kt.write_text(s, encoding='utf-8')
-          PY
 
           cat > .chatgpt-build/clipmerge-src/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application") version "9.4.0" apply false
           }
           EOF
+
           cat > .chatgpt-build/clipmerge-src/app/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application")
@@ -167,8 +56,8 @@ jobs:
                   applicationId = "com.clipmerge.studio"
                   minSdk = 26
                   targetSdk = 36
-                  versionCode = 4
-                  versionName = "2.2"
+                  versionCode = 5
+                  versionName = "2.3"
               }
 
               buildFeatures {
@@ -199,12 +88,12 @@ jobs:
       - name: Copy APK
         run: |
           mkdir -p out
-          cp .chatgpt-build/clipmerge-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v2.2.apk
+          cp .chatgpt-build/clipmerge-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v2.3.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ClipMergeStudio-v2.2-APK
-          path: out/ClipMergeStudio-v2.2.apk
+          name: ClipMergeStudio-v2.3-APK
+          path: out/ClipMergeStudio-v2.3.apk
           if-no-files-found: error
           retention-days: 1
