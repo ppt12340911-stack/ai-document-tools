@@ -1,34 +1,16 @@
-name: Build ClipMerge Studio v2.9 APK
+name: Inspect ClipMerge v2.8 dance source
 on:
   push:
     branches: [build-clipmerge-apk]
   workflow_dispatch:
 
 jobs:
-  build:
+  inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Gradle 9.6
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.6.0'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
-
-      - name: Prepare v2.9 project
+      - name: Decode and print DancePracticeActivity
         run: |
           cat .chatgpt-build/clipmerge/v28_final/part00.txt \
               .chatgpt-build/clipmerge/v28_final/part01.txt \
@@ -38,146 +20,10 @@ jobs:
               .chatgpt-build/clipmerge/v28_final/part05.txt \
               .chatgpt-build/clipmerge/v28_final/part06.txt \
               .chatgpt-build/clipmerge/v28_final/part07.txt > /tmp/clipmerge_v28.b64
-          test "$(wc -c < /tmp/clipmerge_v28.b64)" -eq 46232
           base64 -d /tmp/clipmerge_v28.b64 > /tmp/clipmerge_v28.zip
-          unzip -t /tmp/clipmerge_v28.zip
-          rm -rf .chatgpt-build/clipmerge-v29-src
-          mkdir -p .chatgpt-build/clipmerge-v29-src
-          unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v29-src
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          root = Path('.chatgpt-build/clipmerge-v29-src')
-
-          manifest = root / 'app/src/main/AndroidManifest.xml'
-          m = manifest.read_text(encoding='utf-8')
-          new_activity = '''        <activity
-                      android:name=".DancePracticeActivity"
-                      android:screenOrientation="landscape"
-                      android:launchMode="singleTop"
-                      android:exported="true"
-                      android:label="YouTube 練舞"
-                      android:theme="@android:style/Theme.Material.Light.NoActionBar">
-                      <intent-filter>
-                          <action android:name="android.intent.action.SEND" />
-                          <category android:name="android.intent.category.DEFAULT" />
-                          <data android:mimeType="text/plain" />
-                      </intent-filter>
-                  </activity>'''
-          m2, n = re.subn(
-              r'\s*<activity\s+android:name="\.DancePracticeActivity"[\s\S]*?</activity>|\s*<activity\s+android:name="\.DancePracticeActivity"[\s\S]*?/>',
-              '\n' + new_activity,
-              m,
-              count=1
-          )
-          if n != 1:
-              raise SystemExit('DancePracticeActivity manifest block not found')
-          manifest.write_text(m2, encoding='utf-8')
-
-          p = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
-          s = p.read_text(encoding='utf-8')
-
-          if 'import android.content.Intent' not in s:
-              s = s.replace('import android.content.Context\n', 'import android.content.Context\nimport android.content.Intent\n')
-
-          if 'handleIncomingShare(intent)' not in s:
-              s = s.replace('        loadPlayerHtml()\n', '        loadPlayerHtml()\n        handleIncomingShare(intent)\n')
-
-          s = s.replace(
-              'text = "不用下載：直接記錄 YouTube 影片的開始/結束時間。可慢速、循環、排序連播；不會輸出成新的 MP4。"',
-              'text = "最簡單：在 YouTube 影片按『分享』→ 選『YouTube 練舞』，影片會直接帶進來，不用自己找網址。"'
-          )
-
-          if 'private fun handleIncomingShare' not in s:
-              anchor = s.find('    private fun loadFromUrl() {')
-              if anchor == -1:
-                  raise SystemExit('loadFromUrl block not found')
-              inject = '''    private fun handleIncomingShare(incoming: Intent?) {
-                  if (incoming?.action != Intent.ACTION_SEND) return
-                  val shared = incoming.getStringExtra(Intent.EXTRA_TEXT)
-                      ?: incoming.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
-                  if (!shared.isNullOrBlank()) {
-                      urlInput.setText(shared)
-                      status("已收到 YouTube 分享，正在載入…")
-                      handler.postDelayed({ loadFromUrl() }, 2200L)
-                  }
-              }
-
-              override fun onNewIntent(intent: Intent?) {
-                  super.onNewIntent(intent)
-                  setIntent(intent)
-                  handleIncomingShare(intent)
-              }
-
-          '''
-              s = s[:anchor] + inject + s[anchor:]
-
-          p.write_text(s, encoding='utf-8')
-
-          mp = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
-          ms = mp.read_text(encoding='utf-8').replace('ClipMerge 爆笑剪片工坊  v2.8', 'ClipMerge 爆笑剪片工坊  v2.9')
-          mp.write_text(ms, encoding='utf-8')
-          PY
-
-          cat > .chatgpt-build/clipmerge-v29-src/build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application") version "9.4.0" apply false
-          }
-          EOF
-
-          cat > .chatgpt-build/clipmerge-v29-src/app/build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application")
-          }
-
-          android {
-              namespace = "com.clipmerge.studio"
-              compileSdk = 36
-
-              defaultConfig {
-                  applicationId = "com.clipmerge.studio"
-                  minSdk = 26
-                  targetSdk = 36
-                  versionCode = 10
-                  versionName = "2.9"
-              }
-
-              buildFeatures { buildConfig = true }
-
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
-              }
-          }
-
-          dependencies {
-              val media3 = "1.11.0"
-              implementation("androidx.media3:media3-common:$media3")
-              implementation("androidx.media3:media3-exoplayer:$media3")
-              implementation("androidx.media3:media3-ui:$media3")
-              implementation("androidx.media3:media3-transformer:$media3")
-          }
-          EOF
-
-          sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v29-src/gradle.properties
-          grep -q 'handleIncomingShare' .chatgpt-build/clipmerge-v29-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'android:mimeType="text/plain"' .chatgpt-build/clipmerge-v29-src/app/src/main/AndroidManifest.xml
-
-      - name: Build debug APK
-        working-directory: .chatgpt-build/clipmerge-v29-src
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
-
-      - name: Copy APK
-        run: |
-          mkdir -p out
-          cp .chatgpt-build/clipmerge-v29-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v2.9.apk
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ClipMergeStudio-v2.9-APK
-          path: out/ClipMergeStudio-v2.9.apk
-          if-no-files-found: error
-          retention-days: 1
+          rm -rf /tmp/v28src && mkdir -p /tmp/v28src
+          unzip -q /tmp/clipmerge_v28.zip -d /tmp/v28src
+          echo '===== DANCE SOURCE ====='
+          nl -ba /tmp/v28src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          echo '===== MANIFEST ====='
+          nl -ba /tmp/v28src/app/src/main/AndroidManifest.xml
