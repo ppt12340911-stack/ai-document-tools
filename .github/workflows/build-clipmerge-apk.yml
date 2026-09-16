@@ -51,7 +51,6 @@ jobs:
 
           root = Path('.chatgpt-build/clipmerge-v29-src')
 
-          # YouTube -> Share -> YouTube 練舞
           manifest = root / 'app/src/main/AndroidManifest.xml'
           m = manifest.read_text(encoding='utf-8')
           new_activity = '''        <activity
@@ -83,9 +82,6 @@ jobs:
           if 'import android.content.Intent' not in s:
               s = s.replace('import android.content.Context\n', 'import android.content.Context\nimport android.content.Intent\n')
 
-          if 'private var playerReady = false' not in s:
-              s = s.replace('    private var playbackToken = 0\n', '    private var playbackToken = 0\n    private var playerReady = false\n')
-
           if 'handleIncomingShare(intent)' not in s:
               s = s.replace('        loadPlayerHtml()\n', '        loadPlayerHtml()\n        handleIncomingShare(intent)\n')
 
@@ -94,44 +90,18 @@ jobs:
               'text = "最簡單：在 YouTube 影片按『分享』→ 選『YouTube 練舞』，影片會直接帶進來，不用自己找網址。"'
           )
 
-          # Wait until the IFrame player is ready before loading a shared video.
-          s = s.replace('events:{onStateChange:onStateChange}', 'events:{onReady:onReady,onStateChange:onStateChange}')
-          if 'function onReady(e){ Android.playerReady(); }' not in s:
-              pos = s.find('function onStateChange(e){')
-              if pos == -1:
-                  raise SystemExit('onStateChange JS function not found')
-              s = s[:pos] + 'function onReady(e){ Android.playerReady(); }\n              ' + s[pos:]
-
-          start = s.find('    private fun loadFromUrl() {')
-          end = s.find('    private fun extractVideoId', start)
-          if start == -1 or end == -1:
-              raise SystemExit('loadFromUrl/extractVideoId block not found')
-          new_block = '''    private fun loadFromUrl() {
-                  prepareVideo(urlInput.text.toString())
-              }
-
-              private fun prepareVideo(raw: String) {
-                  val id = extractVideoId(raw)
-                  if (id == null) { toast("無法辨識 YouTube 網址"); return }
-                  currentVideoId = id
-                  startSec = 0.0
-                  endSec = 15.0
-                  updateTimes()
-                  if (playerReady) {
-                      webView.evaluateJavascript("loadVideo('$id')", null)
-                      status("影片已載入，播放到想練的位置後按『設目前為起點／終點』")
-                  } else {
-                      status("正在準備 YouTube 播放器…")
-                  }
-              }
-
-              private fun handleIncomingShare(incoming: Intent?) {
+          if 'private fun handleIncomingShare' not in s:
+              anchor = s.find('    private fun loadFromUrl() {')
+              if anchor == -1:
+                  raise SystemExit('loadFromUrl block not found')
+              inject = '''    private fun handleIncomingShare(incoming: Intent?) {
                   if (incoming?.action != Intent.ACTION_SEND) return
                   val shared = incoming.getStringExtra(Intent.EXTRA_TEXT)
                       ?: incoming.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
                   if (!shared.isNullOrBlank()) {
                       urlInput.setText(shared)
-                      prepareVideo(shared)
+                      status("已收到 YouTube 分享，正在載入…")
+                      handler.postDelayed({ loadFromUrl() }, 2200L)
                   }
               }
 
@@ -142,26 +112,7 @@ jobs:
               }
 
           '''
-          s = s[:start] + new_block + s[end:]
-
-          if '@JavascriptInterface fun playerReady()' not in s:
-              bridge = '    inner class PlayerBridge {\n'
-              idx = s.find(bridge)
-              if idx == -1:
-                  raise SystemExit('PlayerBridge not found')
-              inject = '''    inner class PlayerBridge {
-                  @JavascriptInterface fun playerReady() {
-                      runOnUiThread {
-                          this@DancePracticeActivity.playerReady = true
-                          currentVideoId?.let { id ->
-                              webView.evaluateJavascript("loadVideo('$id')", null)
-                              status("影片已載入，播放到想練的位置後按『設目前為起點／終點』")
-                          }
-                      }
-                  }
-
-          '''
-              s = s[:idx] + inject + s[idx + len(bridge):]
+              s = s[:anchor] + inject + s[anchor:]
 
           p.write_text(s, encoding='utf-8')
 
