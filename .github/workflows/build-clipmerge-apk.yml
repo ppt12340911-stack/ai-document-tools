@@ -47,16 +47,13 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           root = Path('.chatgpt-build/clipmerge-v29-src')
+
           manifest = root / 'app/src/main/AndroidManifest.xml'
           m = manifest.read_text(encoding='utf-8')
-          old = '''        <activity
-                      android:name=".DancePracticeActivity"
-                      android:screenOrientation="landscape"
-                      android:exported="false"
-                      android:theme="@android:style/Theme.Material.Light.NoActionBar" />'''
-          new = '''        <activity
+          new_activity = '''        <activity
                       android:name=".DancePracticeActivity"
                       android:screenOrientation="landscape"
                       android:launchMode="singleTop"
@@ -69,57 +66,50 @@ jobs:
                           <data android:mimeType="text/plain" />
                       </intent-filter>
                   </activity>'''
-          if old not in m:
+          m2, n = re.subn(r'\s*<activity\s+android:name="\.DancePracticeActivity"[\s\S]*?</activity>|\s*<activity\s+android:name="\.DancePracticeActivity"[\s\S]*?/>', '\n' + new_activity, m, count=1)
+          if n != 1:
               raise SystemExit('DancePracticeActivity manifest block not found')
-          manifest.write_text(m.replace(old, new), encoding='utf-8')
+          manifest.write_text(m2, encoding='utf-8')
 
           p = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
           s = p.read_text(encoding='utf-8')
-          s = s.replace('import android.content.Context\n', 'import android.content.Context\nimport android.content.Intent\nimport android.content.ClipboardManager\n')
-          s = s.replace('    private var playbackToken = 0\n', '    private var playbackToken = 0\n    private var playerReady = false\n')
-          s = s.replace('        loadPlayerHtml()\n', '        loadPlayerHtml()\n        handleIncomingShare(intent)\n')
+          if 'import android.content.Intent' not in s:
+              s = s.replace('import android.content.Context\n', 'import android.content.Context\nimport android.content.Intent\nimport android.content.ClipboardManager\n')
+          if 'private var playerReady = false' not in s:
+              s = s.replace('    private var playbackToken = 0\n', '    private var playbackToken = 0\n    private var playerReady = false\n')
+          if 'handleIncomingShare(intent)' not in s:
+              s = s.replace('        loadPlayerHtml()\n', '        loadPlayerHtml()\n        handleIncomingShare(intent)\n')
 
-          old_top = '''        top.addView(urlInput, LinearLayout.LayoutParams(dp(350), dp(48)))
-                  top.addView(space(dp(6)))
-                  top.addView(funButton("載入影片", Color.rgb(239,68,68)) { loadFromUrl() }, LinearLayout.LayoutParams(dp(110), dp(48)))'''
-          new_top = '''        top.addView(urlInput, LinearLayout.LayoutParams(dp(260), dp(48)))
+          s, n = re.subn(
+              r'top\.addView\(urlInput, LinearLayout\.LayoutParams\(dp\(350\), dp\(48\)\)\)\s*top\.addView\(space\(dp\(6\)\)\)\s*top\.addView\(funButton\("載入影片", Color\.rgb\(239,68,68\)\) \{ loadFromUrl\(\) \}, LinearLayout\.LayoutParams\(dp\(110\), dp\(48\)\)\)',
+              '''top.addView(urlInput, LinearLayout.LayoutParams(dp(250), dp(48)))
                   top.addView(space(dp(6)))
                   top.addView(funButton("📋 貼上", Color.rgb(34,197,94)) { pasteFromClipboard() }, LinearLayout.LayoutParams(dp(90), dp(48)))
                   top.addView(space(dp(6)))
-                  top.addView(funButton("載入", Color.rgb(239,68,68)) { loadFromUrl() }, LinearLayout.LayoutParams(dp(80), dp(48)))
+                  top.addView(funButton("載入", Color.rgb(239,68,68)) { loadFromUrl() }, LinearLayout.LayoutParams(dp(78), dp(48)))
                   top.addView(space(dp(6)))
-                  top.addView(funButton("開 YouTube", Color.rgb(139,92,246)) { openYouTube() }, LinearLayout.LayoutParams(dp(110), dp(48)))'''
-          if old_top not in s:
+                  top.addView(funButton("開 YouTube", Color.rgb(139,92,246)) { openYouTube() }, LinearLayout.LayoutParams(dp(108), dp(48)))''',
+              s,
+              count=1
+          )
+          if n != 1:
               raise SystemExit('top URL row block not found')
-          s = s.replace(old_top, new_top)
 
           s = s.replace(
-              '            text = "不用下載：直接記錄 YouTube 影片的開始/結束時間。可慢速、循環、排序連播；不會輸出成新的 MP4。"',
-              '            text = "最快方式：YouTube 影片按『分享』→ 選『YouTube 練舞』，影片會自動載入。也可按『開 YouTube』挑影片，複製連結後回來按『📋 貼上』。"'
+              'text = "不用下載：直接記錄 YouTube 影片的開始/結束時間。可慢速、循環、排序連播；不會輸出成新的 MP4。"',
+              'text = "最快：YouTube 影片按『分享』→『YouTube 練舞』，會自動載入。或按『開 YouTube』找影片，複製連結後回來按『📋 貼上』。"'
           )
 
-          old_js = "events:{onStateChange:onStateChange}"
-          new_js = "events:{onReady:onReady,onStateChange:onStateChange}"
-          if old_js not in s:
-              raise SystemExit('YouTube player events block not found')
-          s = s.replace(old_js, new_js)
-          s = s.replace(
-              '              function onStateChange(e){ if(e.data===YT.PlayerState.PLAYING){endedSent=false;} if(e.data===YT.PlayerState.ENDED && !endedSent){endedSent=true; Android.rangeEnded();} }',
-              '              function onReady(e){ Android.playerReady(); }\n              function onStateChange(e){ if(e.data===YT.PlayerState.PLAYING){endedSent=false;} if(e.data===YT.PlayerState.ENDED && !endedSent){endedSent=true; Android.rangeEnded();} }'
-          )
+          s = s.replace('events:{onStateChange:onStateChange}', 'events:{onReady:onReady,onStateChange:onStateChange}')
+          if 'function onReady(e){ Android.playerReady(); }' not in s:
+              s = s.replace(
+                  'function onStateChange(e){',
+                  'function onReady(e){ Android.playerReady(); }\n              function onStateChange(e){',
+                  1
+              )
 
-          old_load = '''    private fun loadFromUrl() {
-                  val id = extractVideoId(urlInput.text.toString())
-                  if (id == null) { toast("無法辨識 YouTube 網址"); return }
-                  currentVideoId = id
-                  startSec = 0.0
-                  endSec = 15.0
-                  updateTimes()
-                  webView.evaluateJavascript("loadVideo('$id')", null)
-                  status("影片已載入，播放到想練的位置後按『設目前為起點／終點』")
-              }
-          '''
-          new_load = '''    private fun loadFromUrl() {
+          pattern = r'    private fun loadFromUrl\(\) \{[\s\S]*?\n    \}\n\n    private fun extractVideoId'
+          replacement = '''    private fun loadFromUrl() {
                   prepareVideo(urlInput.text.toString())
               }
 
@@ -171,17 +161,16 @@ jobs:
                   setIntent(intent)
                   handleIncomingShare(intent)
               }
-          '''
-          if old_load not in s:
-              raise SystemExit('loadFromUrl block not found')
-          s = s.replace(old_load, new_load)
 
-          old_bridge = '''    inner class PlayerBridge {
-                  @JavascriptInterface fun rangeEnded() {
-                      runOnUiThread { onRangeEnded() }
-                  }
-              }'''
-          new_bridge = '''    inner class PlayerBridge {
+              private fun extractVideoId'''
+          s, n = re.subn(pattern, replacement, s, count=1)
+          if n != 1:
+              raise SystemExit('loadFromUrl block not found')
+
+          if '@JavascriptInterface fun playerReady()' not in s:
+              s = s.replace(
+                  '    inner class PlayerBridge {\n',
+                  '''    inner class PlayerBridge {
                   @JavascriptInterface fun playerReady() {
                       runOnUiThread {
                           this@DancePracticeActivity.playerReady = true
@@ -192,13 +181,9 @@ jobs:
                       }
                   }
 
-                  @JavascriptInterface fun rangeEnded() {
-                      runOnUiThread { onRangeEnded() }
-                  }
-              }'''
-          if old_bridge not in s:
-              raise SystemExit('PlayerBridge block not found')
-          s = s.replace(old_bridge, new_bridge)
+          ''',
+                  1
+              )
           p.write_text(s, encoding='utf-8')
 
           mp = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
@@ -249,8 +234,6 @@ jobs:
           EOF
 
           sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v29-src/gradle.properties
-          test -f .chatgpt-build/clipmerge-v29-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
-          test -f .chatgpt-build/clipmerge-v29-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
           grep -q '📋 貼上' .chatgpt-build/clipmerge-v29-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
           grep -q 'android:mimeType="text/plain"' .chatgpt-build/clipmerge-v29-src/app/src/main/AndroidManifest.xml
 
