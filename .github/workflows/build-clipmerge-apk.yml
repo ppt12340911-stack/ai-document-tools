@@ -51,6 +51,7 @@ jobs:
 
           root = Path('.chatgpt-build/clipmerge-v29-src')
 
+          # Make DancePracticeActivity an Android Share target for text/plain.
           manifest = root / 'app/src/main/AndroidManifest.xml'
           m = manifest.read_text(encoding='utf-8')
           new_activity = '''        <activity
@@ -66,50 +67,87 @@ jobs:
                           <data android:mimeType="text/plain" />
                       </intent-filter>
                   </activity>'''
-          m2, n = re.subn(r'\s*<activity\s+android:name="\.DancePracticeActivity"[\s\S]*?</activity>|\s*<activity\s+android:name="\.DancePracticeActivity"[\s\S]*?/>', '\n' + new_activity, m, count=1)
+          m2, n = re.subn(
+              r'\s*<activity\s+android:name="\.DancePracticeActivity"[\s\S]*?</activity>|\s*<activity\s+android:name="\.DancePracticeActivity"[\s\S]*?/>',
+              '\n' + new_activity,
+              m,
+              count=1
+          )
           if n != 1:
               raise SystemExit('DancePracticeActivity manifest block not found')
           manifest.write_text(m2, encoding='utf-8')
 
           p = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
           s = p.read_text(encoding='utf-8')
-          if 'import android.content.Intent' not in s:
-              s = s.replace('import android.content.Context\n', 'import android.content.Context\nimport android.content.Intent\nimport android.content.ClipboardManager\n')
-          if 'private var playerReady = false' not in s:
-              s = s.replace('    private var playbackToken = 0\n', '    private var playbackToken = 0\n    private var playerReady = false\n')
-          if 'handleIncomingShare(intent)' not in s:
-              s = s.replace('        loadPlayerHtml()\n', '        loadPlayerHtml()\n        handleIncomingShare(intent)\n')
 
-          s, n = re.subn(
-              r'top\.addView\(urlInput, LinearLayout\.LayoutParams\(dp\(350\), dp\(48\)\)\)\s*top\.addView\(space\(dp\(6\)\)\)\s*top\.addView\(funButton\("載入影片", Color\.rgb\(239,68,68\)\) \{ loadFromUrl\(\) \}, LinearLayout\.LayoutParams\(dp\(110\), dp\(48\)\)\)',
-              '''top.addView(urlInput, LinearLayout.LayoutParams(dp(250), dp(48)))
-                  top.addView(space(dp(6)))
-                  top.addView(funButton("📋 貼上", Color.rgb(34,197,94)) { pasteFromClipboard() }, LinearLayout.LayoutParams(dp(90), dp(48)))
-                  top.addView(space(dp(6)))
-                  top.addView(funButton("載入", Color.rgb(239,68,68)) { loadFromUrl() }, LinearLayout.LayoutParams(dp(78), dp(48)))
-                  top.addView(space(dp(6)))
-                  top.addView(funButton("開 YouTube", Color.rgb(139,92,246)) { openYouTube() }, LinearLayout.LayoutParams(dp(108), dp(48)))''',
-              s,
-              count=1
-          )
-          if n != 1:
-              raise SystemExit('top URL row block not found')
+          if 'import android.content.Intent' not in s:
+              s = s.replace(
+                  'import android.content.Context\n',
+                  'import android.content.Context\nimport android.content.Intent\nimport android.content.ClipboardManager\n'
+              )
+
+          if 'private var playerReady = false' not in s:
+              s = s.replace(
+                  '    private var playbackToken = 0\n',
+                  '    private var playbackToken = 0\n    private var playerReady = false\n'
+              )
+
+          if 'handleIncomingShare(intent)' not in s:
+              s = s.replace(
+                  '        loadPlayerHtml()\n',
+                  '        loadPlayerHtml()\n        handleIncomingShare(intent)\n'
+              )
+
+          # Shrink URL field a little, then append quick buttons after the existing Load button.
+          lines = s.splitlines()
+          found_url = False
+          for i, line in enumerate(lines):
+              if 'top.addView(urlInput' in line:
+                  lines[i] = re.sub(r'dp\(\d+\)', 'dp(245)', line, count=1)
+                  found_url = True
+                  break
+          if not found_url:
+              raise SystemExit('urlInput row not found')
+
+          found_load = False
+          for i, line in enumerate(lines):
+              if '載入影片' in line and 'loadFromUrl' in line and 'top.addView' in line:
+                  indent = line[:len(line) - len(line.lstrip())]
+                  extra = [
+                      indent + 'top.addView(space(dp(6)))',
+                      indent + 'top.addView(funButton("📋 貼上", Color.rgb(34,197,94)) { pasteFromClipboard() }, LinearLayout.LayoutParams(dp(92), dp(48)))',
+                      indent + 'top.addView(space(dp(6)))',
+                      indent + 'top.addView(funButton("開 YouTube", Color.rgb(139,92,246)) { openYouTube() }, LinearLayout.LayoutParams(dp(112), dp(48)))',
+                  ]
+                  lines[i+1:i+1] = extra
+                  found_load = True
+                  break
+          if not found_load:
+              raise SystemExit('Load-video button line not found')
+          s = '\n'.join(lines) + '\n'
 
           s = s.replace(
               'text = "不用下載：直接記錄 YouTube 影片的開始/結束時間。可慢速、循環、排序連播；不會輸出成新的 MP4。"',
-              'text = "最快：YouTube 影片按『分享』→『YouTube 練舞』，會自動載入。或按『開 YouTube』找影片，複製連結後回來按『📋 貼上』。"'
+              'text = "最快方式：在 YouTube 影片按『分享』→ 選『YouTube 練舞』，影片會自動載入。也可以複製連結後按『📋 貼上』。"'
           )
 
-          s = s.replace('events:{onStateChange:onStateChange}', 'events:{onReady:onReady,onStateChange:onStateChange}')
+          # IFrame player readiness callback, so a shared URL can be received before the player finishes loading.
+          s = s.replace(
+              'events:{onStateChange:onStateChange}',
+              'events:{onReady:onReady,onStateChange:onStateChange}'
+          )
           if 'function onReady(e){ Android.playerReady(); }' not in s:
-              s = s.replace(
-                  'function onStateChange(e){',
-                  'function onReady(e){ Android.playerReady(); }\n              function onStateChange(e){',
-                  1
-              )
+              pos = s.find('function onStateChange(e){')
+              if pos == -1:
+                  raise SystemExit('onStateChange JS function not found')
+              s = s[:pos] + 'function onReady(e){ Android.playerReady(); }\n              ' + s[pos:]
 
-          pattern = r'    private fun loadFromUrl\(\) \{[\s\S]*?\n    \}\n\n    private fun extractVideoId'
-          replacement = '''    private fun loadFromUrl() {
+          # Replace manual-only URL loading with shared-link / clipboard-aware loading.
+          start = s.find('    private fun loadFromUrl() {')
+          end = s.find('    private fun extractVideoId', start)
+          if start == -1 or end == -1:
+              raise SystemExit('loadFromUrl/extractVideoId block not found')
+          new_block = '''    private fun loadFromUrl() {
                   prepareVideo(urlInput.text.toString())
               }
 
@@ -131,7 +169,9 @@ jobs:
               private fun pasteFromClipboard() {
                   val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                   val clip = cb.primaryClip
-                  val t = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).coerceToText(this).toString() else ""
+                  val t = if (clip != null && clip.itemCount > 0) {
+                      clip.getItemAt(0).coerceToText(this).toString()
+                  } else ""
                   if (t.isBlank()) { toast("剪貼簿沒有 YouTube 網址"); return }
                   urlInput.setText(t)
                   prepareVideo(t)
@@ -140,9 +180,15 @@ jobs:
               private fun openYouTube() {
                   val uri = android.net.Uri.parse("https://www.youtube.com/")
                   try {
-                      startActivity(Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.google.android.youtube") })
+                      startActivity(Intent(Intent.ACTION_VIEW, uri).apply {
+                          setPackage("com.google.android.youtube")
+                      })
                   } catch (_: Exception) {
-                      try { startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (_: Exception) { toast("無法開啟 YouTube") }
+                      try {
+                          startActivity(Intent(Intent.ACTION_VIEW, uri))
+                      } catch (_: Exception) {
+                          toast("無法開啟 YouTube")
+                      }
                   }
               }
 
@@ -162,15 +208,15 @@ jobs:
                   handleIncomingShare(intent)
               }
 
-              private fun extractVideoId'''
-          s, n = re.subn(pattern, replacement, s, count=1)
-          if n != 1:
-              raise SystemExit('loadFromUrl block not found')
+          '''
+          s = s[:start] + new_block + s[end:]
 
           if '@JavascriptInterface fun playerReady()' not in s:
-              s = s.replace(
-                  '    inner class PlayerBridge {\n',
-                  '''    inner class PlayerBridge {
+              bridge = '    inner class PlayerBridge {\n'
+              idx = s.find(bridge)
+              if idx == -1:
+                  raise SystemExit('PlayerBridge not found')
+              inject = '''    inner class PlayerBridge {
                   @JavascriptInterface fun playerReady() {
                       runOnUiThread {
                           this@DancePracticeActivity.playerReady = true
@@ -181,13 +227,16 @@ jobs:
                       }
                   }
 
-          ''',
-                  1
-              )
+          '''
+              s = s[:idx] + inject + s[idx + len(bridge):]
+
           p.write_text(s, encoding='utf-8')
 
           mp = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
-          ms = mp.read_text(encoding='utf-8').replace('ClipMerge 爆笑剪片工坊  v2.8', 'ClipMerge 爆笑剪片工坊  v2.9')
+          ms = mp.read_text(encoding='utf-8').replace(
+              'ClipMerge 爆笑剪片工坊  v2.8',
+              'ClipMerge 爆笑剪片工坊  v2.9'
+          )
           mp.write_text(ms, encoding='utf-8')
           PY
 
@@ -235,6 +284,7 @@ jobs:
 
           sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v29-src/gradle.properties
           grep -q '📋 貼上' .chatgpt-build/clipmerge-v29-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'handleIncomingShare' .chatgpt-build/clipmerge-v29-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
           grep -q 'android:mimeType="text/plain"' .chatgpt-build/clipmerge-v29-src/app/src/main/AndroidManifest.xml
 
       - name: Build debug APK
