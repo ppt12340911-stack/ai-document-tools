@@ -1,4 +1,4 @@
-name: Build ClipMerge Studio v3.2 APK
+name: Build ClipMerge Studio v3.3 APK
 on:
   push:
     branches: [build-clipmerge-apk]
@@ -28,7 +28,7 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Prepare v3.2 project
+      - name: Prepare v3.3 project
         run: |
           cat .chatgpt-build/clipmerge/v28_final/part00.txt \
               .chatgpt-build/clipmerge/v28_final/part01.txt \
@@ -41,22 +41,22 @@ jobs:
           base64 -d /tmp/clipmerge_v28.b64 > /tmp/clipmerge_v28.zip
           unzip -t /tmp/clipmerge_v28.zip
 
-          rm -rf .chatgpt-build/clipmerge-v32-src
-          mkdir -p .chatgpt-build/clipmerge-v32-src
-          unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v32-src
+          rm -rf .chatgpt-build/clipmerge-v33-src
+          mkdir -p .chatgpt-build/clipmerge-v33-src
+          unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v33-src
 
           cat .chatgpt-build/clipmerge/v31/dance_part0.txt \
               .chatgpt-build/clipmerge/v31/dance_part1.txt \
               .chatgpt-build/clipmerge/v31/dance_part2.txt \
               .chatgpt-build/clipmerge/v31/dance_part3.txt > /tmp/dance_v31.b64
           test "$(wc -c < /tmp/dance_v31.b64)" -eq 11928
-          base64 -d /tmp/dance_v31.b64 | gzip -d > .chatgpt-build/clipmerge-v32-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          base64 -d /tmp/dance_v31.b64 | gzip -d > .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          root = Path('.chatgpt-build/clipmerge-v32-src')
+          root = Path('.chatgpt-build/clipmerge-v33-src')
           manifest = root / 'app/src/main/AndroidManifest.xml'
           m = manifest.read_text(encoding='utf-8')
           replacement = '''
@@ -87,8 +87,7 @@ jobs:
           dance = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
           s = dance.read_text(encoding='utf-8')
 
-          # YouTube now requires a valid embedder identity / Referer in WebView.
-          # Replace the old youtube.com base URL even when the call is split across lines.
+          # v3.2 YouTube WebView embed identity fix.
           s, base_count = re.subn(
               r'webView\.loadDataWithBaseURL\(\s*"https://www\.youtube\.com"',
               'webView.loadDataWithBaseURL("https://com.clipmerge.studio/"',
@@ -97,8 +96,6 @@ jobs:
           )
           if base_count != 1:
               raise SystemExit('YouTube WebView base URL patch did not match')
-
-          # Add an explicit IFrame API origin using the app package identity.
           if "origin:'https://com.clipmerge.studio'" not in s:
               s, origin_count = re.subn(
                   r'(playerVars\s*:\s*\{)',
@@ -109,22 +106,69 @@ jobs:
               if origin_count != 1:
                   raise SystemExit('YouTube playerVars origin patch did not match')
 
-          s = s.replace('💃 YouTube 練舞剪輯 v3.1', '💃 YouTube 練舞剪輯 v3.2')
+          # v3.3: each column scrolls vertically so controls below the fold remain reachable.
+          old_cols = '''        val left = LinearLayout(this).apply {
+              orientation = LinearLayout.VERTICAL
+              setPadding(0, 0, dp(8), 0)
+          }
+          val right = LinearLayout(this).apply {
+              orientation = LinearLayout.VERTICAL
+              setPadding(dp(8), 0, 0, 0)
+          }
+          main.addView(left, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
+          main.addView(right, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))'''
+          new_cols = '''        val leftScroll = ScrollView(this).apply {
+              isFillViewport = true
+              overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+          }
+          val rightScroll = ScrollView(this).apply {
+              isFillViewport = true
+              overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+          }
+          val left = LinearLayout(this).apply {
+              orientation = LinearLayout.VERTICAL
+              setPadding(0, 0, dp(8), dp(24))
+          }
+          val right = LinearLayout(this).apply {
+              orientation = LinearLayout.VERTICAL
+              setPadding(dp(8), 0, 0, dp(24))
+          }
+          leftScroll.addView(left, FrameLayout.LayoutParams(
+              FrameLayout.LayoutParams.MATCH_PARENT,
+              FrameLayout.LayoutParams.WRAP_CONTENT
+          ))
+          rightScroll.addView(right, FrameLayout.LayoutParams(
+              FrameLayout.LayoutParams.MATCH_PARENT,
+              FrameLayout.LayoutParams.WRAP_CONTENT
+          ))
+          main.addView(leftScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
+          main.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))'''
+          if old_cols not in s:
+              raise SystemExit('column block not found for scroll patch')
+          s = s.replace(old_cols, new_cols, 1)
+
+          old_list = '''        right.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))'''
+          new_list = '''        right.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(210)))'''
+          if old_list not in s:
+              raise SystemExit('segment list layout block not found')
+          s = s.replace(old_list, new_list, 1)
+
+          s = s.replace('💃 YouTube 練舞剪輯 v3.1', '💃 YouTube 練舞剪輯 v3.3')
           dance.write_text(s, encoding='utf-8')
 
           main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
           s = main.read_text(encoding='utf-8')
-          s = s.replace('ClipMerge 爆笑剪片工坊  v2.8', 'ClipMerge 爆笑剪片工坊  v3.2')
+          s = s.replace('ClipMerge 爆笑剪片工坊  v2.8', 'ClipMerge 爆笑剪片工坊  v3.3')
           main.write_text(s, encoding='utf-8')
           PY
 
-          cat > .chatgpt-build/clipmerge-v32-src/build.gradle.kts <<'EOF'
+          cat > .chatgpt-build/clipmerge-v33-src/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application") version "9.4.0" apply false
           }
           EOF
 
-          cat > .chatgpt-build/clipmerge-v32-src/app/build.gradle.kts <<'EOF'
+          cat > .chatgpt-build/clipmerge-v33-src/app/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application")
           }
@@ -137,8 +181,8 @@ jobs:
                   applicationId = "com.clipmerge.studio"
                   minSdk = 26
                   targetSdk = 36
-                  versionCode = 12
-                  versionName = "3.2"
+                  versionCode = 13
+                  versionName = "3.3"
               }
 
               buildFeatures { buildConfig = true }
@@ -158,25 +202,25 @@ jobs:
           }
           EOF
 
-          sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v32-src/gradle.properties
-          grep -q 'https://com.clipmerge.studio/' .chatgpt-build/clipmerge-v32-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q "origin:'https://com.clipmerge.studio'" .chatgpt-build/clipmerge-v32-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q '⛶ 全螢幕' .chatgpt-build/clipmerge-v32-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'android:mimeType="text/plain"' .chatgpt-build/clipmerge-v32-src/app/src/main/AndroidManifest.xml
+          sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v33-src/gradle.properties
+          grep -q 'https://com.clipmerge.studio/' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'val leftScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'val rightScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'dp(210)' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
       - name: Build debug APK
-        working-directory: .chatgpt-build/clipmerge-v32-src
+        working-directory: .chatgpt-build/clipmerge-v33-src
         run: gradle --no-daemon --stacktrace :app:assembleDebug
 
       - name: Copy APK
         run: |
           mkdir -p out
-          cp .chatgpt-build/clipmerge-v32-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v3.2.apk
+          cp .chatgpt-build/clipmerge-v33-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v3.3.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ClipMergeStudio-v3.2-APK
-          path: out/ClipMergeStudio-v3.2.apk
+          name: ClipMergeStudio-v3.3-APK
+          path: out/ClipMergeStudio-v3.3.apk
           if-no-files-found: error
           retention-days: 1
