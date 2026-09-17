@@ -86,10 +86,29 @@ jobs:
 
           dance = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
           s = dance.read_text(encoding='utf-8')
-          s = s.replace('webView.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)',
-                        'webView.loadDataWithBaseURL("https://com.clipmerge.studio/", html, "text/html", "UTF-8", null)')
-          s = s.replace("playerVars:{playsinline:1,controls:1,rel:0},events:{onStateChange:onStateChange}",
-                        "playerVars:{playsinline:1,controls:1,rel:0,origin:'https://com.clipmerge.studio'},events:{onStateChange:onStateChange}")
+
+          # YouTube now requires a valid embedder identity / Referer in WebView.
+          # Replace the old youtube.com base URL even when the call is split across lines.
+          s, base_count = re.subn(
+              r'webView\.loadDataWithBaseURL\(\s*"https://www\.youtube\.com"',
+              'webView.loadDataWithBaseURL("https://com.clipmerge.studio/"',
+              s,
+              count=1,
+          )
+          if base_count != 1:
+              raise SystemExit('YouTube WebView base URL patch did not match')
+
+          # Add an explicit IFrame API origin using the app package identity.
+          if "origin:'https://com.clipmerge.studio'" not in s:
+              s, origin_count = re.subn(
+                  r'(playerVars\s*:\s*\{)',
+                  r"\1origin:'https://com.clipmerge.studio',",
+                  s,
+                  count=1,
+              )
+              if origin_count != 1:
+                  raise SystemExit('YouTube playerVars origin patch did not match')
+
           s = s.replace('💃 YouTube 練舞剪輯 v3.1', '💃 YouTube 練舞剪輯 v3.2')
           dance.write_text(s, encoding='utf-8')
 
