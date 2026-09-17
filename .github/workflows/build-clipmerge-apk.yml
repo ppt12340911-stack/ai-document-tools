@@ -57,6 +57,7 @@ jobs:
           import re
 
           root = Path('.chatgpt-build/clipmerge-v33-src')
+
           manifest = root / 'app/src/main/AndroidManifest.xml'
           m = manifest.read_text(encoding='utf-8')
           replacement = '''
@@ -87,7 +88,7 @@ jobs:
           dance = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
           s = dance.read_text(encoding='utf-8')
 
-          # v3.2 YouTube WebView embed identity fix.
+          # Preserve the v3.2 YouTube WebView embed fix.
           s, base_count = re.subn(
               r'webView\.loadDataWithBaseURL\(\s*"https://www\.youtube\.com"',
               'webView.loadDataWithBaseURL("https://com.clipmerge.studio/"',
@@ -106,17 +107,7 @@ jobs:
               if origin_count != 1:
                   raise SystemExit('YouTube playerVars origin patch did not match')
 
-          # v3.3: each column scrolls vertically so controls below the fold remain reachable.
-          old_cols = '''        val left = LinearLayout(this).apply {
-              orientation = LinearLayout.VERTICAL
-              setPadding(0, 0, dp(8), 0)
-          }
-          val right = LinearLayout(this).apply {
-              orientation = LinearLayout.VERTICAL
-              setPadding(dp(8), 0, 0, 0)
-          }
-          main.addView(left, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
-          main.addView(right, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))'''
+          # v3.3: make left and right panels independently vertically scrollable.
           new_cols = '''        val leftScroll = ScrollView(this).apply {
               isFillViewport = true
               overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
@@ -143,23 +134,32 @@ jobs:
           ))
           main.addView(leftScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
           main.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))'''
-          if old_cols not in s:
-              raise SystemExit('column block not found for scroll patch')
-          s = s.replace(old_cols, new_cols, 1)
 
-          old_list = '''        right.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))'''
-          new_list = '''        right.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(210)))'''
-          if old_list not in s:
+          s, cols_count = re.subn(
+              r'\s*val left = LinearLayout\(this\)\.apply \{[\s\S]*?main\.addView\(right,\s*LinearLayout\.LayoutParams\(0,\s*LinearLayout\.LayoutParams\.MATCH_PARENT,\s*1f\)\)',
+              '\n' + new_cols,
+              s,
+              count=1,
+          )
+          if cols_count != 1:
+              raise SystemExit('column block not found for scroll patch')
+
+          s, list_count = re.subn(
+              r'right\.addView\(segmentList,\s*LinearLayout\.LayoutParams\(\s*LinearLayout\.LayoutParams\.MATCH_PARENT,\s*0,\s*1f\s*\)\)',
+              'right.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(210)))',
+              s,
+              count=1,
+          )
+          if list_count != 1:
               raise SystemExit('segment list layout block not found')
-          s = s.replace(old_list, new_list, 1)
 
           s = s.replace('💃 YouTube 練舞剪輯 v3.1', '💃 YouTube 練舞剪輯 v3.3')
           dance.write_text(s, encoding='utf-8')
 
           main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
-          s = main.read_text(encoding='utf-8')
-          s = s.replace('ClipMerge 爆笑剪片工坊  v2.8', 'ClipMerge 爆笑剪片工坊  v3.3')
-          main.write_text(s, encoding='utf-8')
+          ms = main.read_text(encoding='utf-8')
+          ms = ms.replace('ClipMerge 爆笑剪片工坊  v2.8', 'ClipMerge 爆笑剪片工坊  v3.3')
+          main.write_text(ms, encoding='utf-8')
           PY
 
           cat > .chatgpt-build/clipmerge-v33-src/build.gradle.kts <<'EOF'
