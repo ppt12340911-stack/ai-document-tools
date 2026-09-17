@@ -1,4 +1,4 @@
-name: Build ClipMerge Studio v3.1 APK
+name: Build ClipMerge Studio v3.2 APK
 on:
   push:
     branches: [build-clipmerge-apk]
@@ -28,7 +28,7 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Prepare v3.1 project
+      - name: Prepare v3.2 project
         run: |
           cat .chatgpt-build/clipmerge/v28_final/part00.txt \
               .chatgpt-build/clipmerge/v28_final/part01.txt \
@@ -41,22 +41,22 @@ jobs:
           base64 -d /tmp/clipmerge_v28.b64 > /tmp/clipmerge_v28.zip
           unzip -t /tmp/clipmerge_v28.zip
 
-          rm -rf .chatgpt-build/clipmerge-v31-src
-          mkdir -p .chatgpt-build/clipmerge-v31-src
-          unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v31-src
+          rm -rf .chatgpt-build/clipmerge-v32-src
+          mkdir -p .chatgpt-build/clipmerge-v32-src
+          unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v32-src
 
           cat .chatgpt-build/clipmerge/v31/dance_part0.txt \
               .chatgpt-build/clipmerge/v31/dance_part1.txt \
               .chatgpt-build/clipmerge/v31/dance_part2.txt \
               .chatgpt-build/clipmerge/v31/dance_part3.txt > /tmp/dance_v31.b64
           test "$(wc -c < /tmp/dance_v31.b64)" -eq 11928
-          base64 -d /tmp/dance_v31.b64 | gzip -d > .chatgpt-build/clipmerge-v31-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          base64 -d /tmp/dance_v31.b64 | gzip -d > .chatgpt-build/clipmerge-v32-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          root = Path('.chatgpt-build/clipmerge-v31-src')
+          root = Path('.chatgpt-build/clipmerge-v32-src')
           manifest = root / 'app/src/main/AndroidManifest.xml'
           m = manifest.read_text(encoding='utf-8')
           replacement = '''
@@ -84,19 +84,28 @@ jobs:
               raise SystemExit('DancePracticeActivity manifest block not found')
           manifest.write_text(m2, encoding='utf-8')
 
+          dance = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
+          s = dance.read_text(encoding='utf-8')
+          s = s.replace('webView.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)',
+                        'webView.loadDataWithBaseURL("https://com.clipmerge.studio/", html, "text/html", "UTF-8", null)')
+          s = s.replace("playerVars:{playsinline:1,controls:1,rel:0},events:{onStateChange:onStateChange}",
+                        "playerVars:{playsinline:1,controls:1,rel:0,origin:'https://com.clipmerge.studio'},events:{onStateChange:onStateChange}")
+          s = s.replace('💃 YouTube 練舞剪輯 v3.1', '💃 YouTube 練舞剪輯 v3.2')
+          dance.write_text(s, encoding='utf-8')
+
           main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
           s = main.read_text(encoding='utf-8')
-          s = s.replace('ClipMerge 爆笑剪片工坊  v2.8', 'ClipMerge 爆笑剪片工坊  v3.1')
+          s = s.replace('ClipMerge 爆笑剪片工坊  v2.8', 'ClipMerge 爆笑剪片工坊  v3.2')
           main.write_text(s, encoding='utf-8')
           PY
 
-          cat > .chatgpt-build/clipmerge-v31-src/build.gradle.kts <<'EOF'
+          cat > .chatgpt-build/clipmerge-v32-src/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application") version "9.4.0" apply false
           }
           EOF
 
-          cat > .chatgpt-build/clipmerge-v31-src/app/build.gradle.kts <<'EOF'
+          cat > .chatgpt-build/clipmerge-v32-src/app/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application")
           }
@@ -109,8 +118,8 @@ jobs:
                   applicationId = "com.clipmerge.studio"
                   minSdk = 26
                   targetSdk = 36
-                  versionCode = 11
-                  versionName = "3.1"
+                  versionCode = 12
+                  versionName = "3.2"
               }
 
               buildFeatures { buildConfig = true }
@@ -130,24 +139,25 @@ jobs:
           }
           EOF
 
-          sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v31-src/gradle.properties
-          grep -q '⛶ 全螢幕' .chatgpt-build/clipmerge-v31-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'autoFullscreenCheck' .chatgpt-build/clipmerge-v31-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'android:mimeType="text/plain"' .chatgpt-build/clipmerge-v31-src/app/src/main/AndroidManifest.xml
+          sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v32-src/gradle.properties
+          grep -q 'https://com.clipmerge.studio/' .chatgpt-build/clipmerge-v32-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q "origin:'https://com.clipmerge.studio'" .chatgpt-build/clipmerge-v32-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q '⛶ 全螢幕' .chatgpt-build/clipmerge-v32-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'android:mimeType="text/plain"' .chatgpt-build/clipmerge-v32-src/app/src/main/AndroidManifest.xml
 
       - name: Build debug APK
-        working-directory: .chatgpt-build/clipmerge-v31-src
+        working-directory: .chatgpt-build/clipmerge-v32-src
         run: gradle --no-daemon --stacktrace :app:assembleDebug
 
       - name: Copy APK
         run: |
           mkdir -p out
-          cp .chatgpt-build/clipmerge-v31-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v3.1.apk
+          cp .chatgpt-build/clipmerge-v32-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v3.2.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ClipMergeStudio-v3.1-APK
-          path: out/ClipMergeStudio-v3.1.apk
+          name: ClipMergeStudio-v3.2-APK
+          path: out/ClipMergeStudio-v3.2.apk
           if-no-files-found: error
           retention-days: 1
