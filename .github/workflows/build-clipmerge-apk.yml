@@ -1,4 +1,4 @@
-name: Build ClipMerge Studio v3.4 APK
+name: Build ClipMerge Studio v3.5 APK
 on:
   push:
     branches: [build-clipmerge-apk]
@@ -28,7 +28,7 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Prepare v3.4 project
+      - name: Prepare v3.5 project
         run: |
           cat .chatgpt-build/clipmerge/v28_final/part00.txt \
               .chatgpt-build/clipmerge/v28_final/part01.txt \
@@ -41,22 +41,21 @@ jobs:
           base64 -d /tmp/clipmerge_v28.b64 > /tmp/clipmerge_v28.zip
           unzip -t /tmp/clipmerge_v28.zip
 
-          rm -rf .chatgpt-build/clipmerge-v33-src
-          mkdir -p .chatgpt-build/clipmerge-v33-src
-          unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v33-src
+          rm -rf .chatgpt-build/clipmerge-v35-src
+          mkdir -p .chatgpt-build/clipmerge-v35-src
+          unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v35-src
 
-          cat .chatgpt-build/clipmerge/v31/dance_part0.txt \
-              .chatgpt-build/clipmerge/v31/dance_part1.txt \
-              .chatgpt-build/clipmerge/v31/dance_part2.txt \
-              .chatgpt-build/clipmerge/v31/dance_part3.txt > /tmp/dance_v31.b64
-          test "$(wc -c < /tmp/dance_v31.b64)" -eq 11928
-          base64 -d /tmp/dance_v31.b64 | gzip -d > .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          cat .chatgpt-build/clipmerge/v35/dance_part0.txt \
+              .chatgpt-build/clipmerge/v35/dance_part1.txt \
+              .chatgpt-build/clipmerge/v35/dance_part2.txt \
+              .chatgpt-build/clipmerge/v35/dance_part3.txt > /tmp/dance_v35.b64
+          base64 -d /tmp/dance_v35.b64 | gzip -d > .chatgpt-build/clipmerge-v35-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          root = Path('.chatgpt-build/clipmerge-v33-src')
+          root = Path('.chatgpt-build/clipmerge-v35-src')
 
           manifest = root / 'app/src/main/AndroidManifest.xml'
           m = manifest.read_text(encoding='utf-8')
@@ -85,249 +84,19 @@ jobs:
               raise SystemExit('DancePracticeActivity manifest block not found')
           manifest.write_text(m2, encoding='utf-8')
 
-          dance = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
-          s = dance.read_text(encoding='utf-8')
-
-          # Keep the v3.2 YouTube embed fix. Match either single-line or multi-line source.
-          s, base_count = re.subn(
-              r'webView\.loadDataWithBaseURL\(\s*"[^"]+"',
-              'webView.loadDataWithBaseURL("https://com.clipmerge.studio/"',
-              s,
-              count=1,
-          )
-          if base_count != 1:
-              raise SystemExit('YouTube WebView base URL call not found')
-
-          if "origin:'https://com.clipmerge.studio'" not in s:
-              s, count = re.subn(
-                  r'(playerVars\s*:\s*\{)',
-                  r"\1origin:'https://com.clipmerge.studio',",
-                  s,
-                  count=1,
-              )
-              if count != 1:
-                  raise SystemExit('YouTube player origin patch failed')
-
-          # v3.4 scrolling fix. Support both known source layouts.
-          if 'private lateinit var leftPanel: LinearLayout' in s:
-              if 'private lateinit var leftControlsScroll: ScrollView' not in s:
-                  s = s.replace(
-                      '    private lateinit var leftPanel: LinearLayout\n',
-                      '    private lateinit var leftPanel: LinearLayout\n'
-                      '    private lateinit var leftControlsScroll: ScrollView\n'
-                      '    private lateinit var leftControlsPanel: LinearLayout\n'
-                      '    private lateinit var rightScroll: ScrollView\n',
-                      1,
-                  )
-
-              new_layout = '''        leftPanel = LinearLayout(this).apply {
-                  orientation = LinearLayout.VERTICAL
-                  setPadding(0, 0, dp(8), 0)
-              }
-
-              leftControlsScroll = ScrollView(this).apply {
-                  isFillViewport = false
-                  overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-              }
-              leftControlsPanel = LinearLayout(this).apply {
-                  orientation = LinearLayout.VERTICAL
-                  setPadding(0, 0, 0, dp(24))
-              }
-              leftControlsScroll.addView(
-                  leftControlsPanel,
-                  FrameLayout.LayoutParams(
-                      FrameLayout.LayoutParams.MATCH_PARENT,
-                      FrameLayout.LayoutParams.WRAP_CONTENT
-                  )
-              )
-
-              rightScroll = ScrollView(this).apply {
-                  isFillViewport = true
-                  overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-              }
-              rightPanel = LinearLayout(this).apply {
-                  orientation = LinearLayout.VERTICAL
-                  setPadding(dp(8), 0, 0, dp(28))
-              }
-              rightScroll.addView(
-                  rightPanel,
-                  FrameLayout.LayoutParams(
-                      FrameLayout.LayoutParams.MATCH_PARENT,
-                      FrameLayout.LayoutParams.WRAP_CONTENT
-                  )
-              )
-
-              mainLayout.addView(leftPanel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
-              mainLayout.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))'''
-
-              s, layout_count = re.subn(
-                  r'        leftPanel = LinearLayout\(this\)\.apply \{[\s\S]*?mainLayout\.addView\(rightPanel,\s*LinearLayout\.LayoutParams\(0,\s*LinearLayout\.LayoutParams\.MATCH_PARENT,\s*1f\)\)',
-                  new_layout,
-                  s,
-                  count=1,
-              )
-              if layout_count != 1:
-                  raise SystemExit('field-based left/right layout block not found')
-
-              if 'leftPanel.addView(leftControlsScroll' not in s:
-                  s, anchor_count = re.subn(
-                      r'(        leftPanel\.addView\(fullscreenControls,\s*LinearLayout\.LayoutParams\(LinearLayout\.LayoutParams\.MATCH_PARENT,\s*dp\(62\)\)\)\n)',
-                      r'''\1        leftPanel.addView(leftControlsScroll, LinearLayout.LayoutParams(
-                  LinearLayout.LayoutParams.MATCH_PARENT,
-                  0,
-                  1f
-              ))
-          ''',
-                      s,
-                      count=1,
-                  )
-                  if anchor_count != 1:
-                      raise SystemExit('fullscreen controls anchor not found')
-
-              for name in ('timeRow', 'setRow', 'speedRow', 'addRow'):
-                  s = s.replace(f'        leftPanel.addView({name})', f'        leftControlsPanel.addView({name})', 1)
-
-              s = re.sub(
-                  r'        rightPanel\.addView\(segmentList,\s*LinearLayout\.LayoutParams\(LinearLayout\.LayoutParams\.MATCH_PARENT,\s*0,\s*1f\)\)',
-                  '        rightPanel.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(210)))',
-                  s,
-                  count=1,
-              )
-              s = s.replace('        rightPanel.visibility = View.GONE\n', '        rightScroll.visibility = View.GONE\n', 1)
-              s = s.replace('        rightPanel.visibility = View.VISIBLE\n', '        rightScroll.visibility = View.VISIBLE\n', 1)
-
-              s = re.sub(
-                  r'        timeRow\.visibility = View\.GONE\n        setRow\.visibility = View\.GONE\n        speedRow\.visibility = View\.GONE\n        addRow\.visibility = View\.GONE\n',
-                  '        leftControlsScroll.visibility = View.GONE\n',
-                  s,
-                  count=1,
-              )
-              s = re.sub(
-                  r'        timeRow\.visibility = View\.VISIBLE\n        setRow\.visibility = View\.VISIBLE\n        speedRow\.visibility = View\.VISIBLE\n        addRow\.visibility = View\.VISIBLE\n',
-                  '        leftControlsScroll.visibility = View.VISIBLE\n',
-                  s,
-                  count=1,
-              )
-          else:
-              # Older source layout: wrap the left and right columns directly.
-              new_cols = '''        val leftScroll = ScrollView(this).apply {
-                  isFillViewport = true
-                  overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-              }
-              val rightScroll = ScrollView(this).apply {
-                  isFillViewport = true
-                  overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-              }
-              val left = LinearLayout(this).apply {
-                  orientation = LinearLayout.VERTICAL
-                  setPadding(0, 0, dp(8), dp(24))
-              }
-              val right = LinearLayout(this).apply {
-                  orientation = LinearLayout.VERTICAL
-                  setPadding(dp(8), 0, 0, dp(24))
-              }
-              leftScroll.addView(left, FrameLayout.LayoutParams(
-                  FrameLayout.LayoutParams.MATCH_PARENT,
-                  FrameLayout.LayoutParams.WRAP_CONTENT
-              ))
-              rightScroll.addView(right, FrameLayout.LayoutParams(
-                  FrameLayout.LayoutParams.MATCH_PARENT,
-                  FrameLayout.LayoutParams.WRAP_CONTENT
-              ))
-              main.addView(leftScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
-              main.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))'''
-              s, layout_count = re.subn(
-                  r'        val left = LinearLayout\(this\)\.apply \{[\s\S]*?main\.addView\(right,\s*LinearLayout\.LayoutParams\(0,\s*LinearLayout\.LayoutParams\.MATCH_PARENT,\s*1f\)\)',
-                  new_cols,
-                  s,
-                  count=1,
-              )
-              if layout_count != 1:
-                  raise SystemExit('legacy left/right layout block not found')
-              s = re.sub(
-                  r'        right\.addView\(segmentList,\s*LinearLayout\.LayoutParams\(LinearLayout\.LayoutParams\.MATCH_PARENT,\s*0,\s*1f\)\)',
-                  '        right.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(220)))',
-                  s,
-                  count=1,
-              )
-
-          # v3.4: make the left control area visibly scrollable on short/wide screens.
-          # The previous fixed 300dp player could consume almost all vertical space.
-          if 'private lateinit var leftControlsScroll: ScrollView' in s:
-              old_web = '        leftPanel.addView(webView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(300)))'
-              new_web = '''        leftPanel.addView(webView, LinearLayout.LayoutParams(
-                  LinearLayout.LayoutParams.MATCH_PARENT,
-                  0,
-                  0.58f
-              ))'''
-              if old_web not in s:
-                  raise SystemExit('v3.4 webView layout anchor not found')
-              s = s.replace(old_web, new_web, 1)
-
-              old_scroll = '''        leftPanel.addView(leftControlsScroll, LinearLayout.LayoutParams(
-                  LinearLayout.LayoutParams.MATCH_PARENT,
-                  0,
-                  1f
-              ))'''
-              new_scroll = '''        leftPanel.addView(leftControlsScroll, LinearLayout.LayoutParams(
-                  LinearLayout.LayoutParams.MATCH_PARENT,
-                  0,
-                  0.42f
-              ))'''
-              if old_scroll not in s:
-                  raise SystemExit('v3.4 left scroll layout anchor not found')
-              s = s.replace(old_scroll, new_scroll, 1)
-
-              s = s.replace(
-                  '''            isFillViewport = false
-                  overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS''',
-                  '''            isFillViewport = true
-                  isVerticalScrollBarEnabled = true
-                  isScrollbarFadingEnabled = false
-                  overScrollMode = View.OVER_SCROLL_ALWAYS''',
-                  1,
-              )
-
-              # Restore the same proportions after leaving full screen. Older source
-              # variants format this block differently, so use a whitespace-tolerant regex.
-              s, _ = re.subn(
-                  r'        webView\.layoutParams\s*=\s*LinearLayout\.LayoutParams\(\s*LinearLayout\.LayoutParams\.MATCH_PARENT\s*,\s*dp\(300\)\s*\)',
-                  '''        webView.layoutParams = LinearLayout.LayoutParams(
-                  LinearLayout.LayoutParams.MATCH_PARENT,
-                  0,
-                  0.58f
-              )''',
-                  s,
-                  count=1,
-              )
-
-          s = s.replace('text = "💃 YouTube 練舞剪輯 v3.1"', 'text = "💃 YouTube 練舞剪輯 v3.4"', 1)
-          s = s.replace('text = "💃 YouTube 練舞剪輯 v3.2"', 'text = "💃 YouTube 練舞剪輯 v3.4"', 1)
-          s = s.replace('text = "💃 YouTube 練舞剪輯 v3.3"', 'text = "💃 YouTube 練舞剪輯 v3.4"', 1)
-
-          s = s.replace(
-              'text = "最快方式：YouTube 影片或播放清單 → 分享 → YouTube 練舞。練習時可按「⛶ 全螢幕」。"',
-              'text = "最快方式：YouTube 影片或播放清單 → 分享 → YouTube 練舞。左右操作區可上下滑動；練習時可按「⛶ 全螢幕」。"',
-              1,
-          )
-
-          if 'leftControlsScroll' not in s or 'rightScroll' not in s:
-              raise SystemExit('scroll containers were not applied')
-          dance.write_text(s, encoding='utf-8')
-
           main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
           ms = main.read_text(encoding='utf-8')
-          ms = re.sub(r'ClipMerge 爆笑剪片工坊\s+v\d+\.\d+', 'ClipMerge 爆笑剪片工坊  v3.4', ms)
+          ms = re.sub(r'ClipMerge 爆笑剪片工坊\s+v\d+\.\d+', 'ClipMerge 爆笑剪片工坊  v3.5', ms)
           main.write_text(ms, encoding='utf-8')
           PY
 
-          cat > .chatgpt-build/clipmerge-v33-src/build.gradle.kts <<'EOF'
+          cat > .chatgpt-build/clipmerge-v35-src/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application") version "9.4.0" apply false
           }
           EOF
 
-          cat > .chatgpt-build/clipmerge-v33-src/app/build.gradle.kts <<'EOF'
+          cat > .chatgpt-build/clipmerge-v35-src/app/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application")
           }
@@ -340,8 +109,8 @@ jobs:
                   applicationId = "com.clipmerge.studio"
                   minSdk = 26
                   targetSdk = 36
-                  versionCode = 14
-                  versionName = "3.4"
+                  versionCode = 15
+                  versionName = "3.5"
               }
 
               buildFeatures { buildConfig = true }
@@ -361,27 +130,25 @@ jobs:
           }
           EOF
 
-          sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v33-src/gradle.properties
-          grep -q 'https://com.clipmerge.studio/' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'leftControlsScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'rightScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q '0.58f' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q '0.42f' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'YouTube 練舞剪輯 v3.4' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v35-src/gradle.properties
+          grep -q 'YouTube 練舞剪輯 v3.5' .chatgpt-build/clipmerge-v35-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'text = "片段設定"' .chatgpt-build/clipmerge-v35-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'players=\[null,null\]' .chatgpt-build/clipmerge-v35-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'function prepareNext' .chatgpt-build/clipmerge-v35-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
       - name: Build debug APK
-        working-directory: .chatgpt-build/clipmerge-v33-src
+        working-directory: .chatgpt-build/clipmerge-v35-src
         run: gradle --no-daemon --stacktrace :app:assembleDebug
 
       - name: Copy APK
         run: |
           mkdir -p out
-          cp .chatgpt-build/clipmerge-v33-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v3.4.apk
+          cp .chatgpt-build/clipmerge-v35-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v3.5.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ClipMergeStudio-v3.4-APK
-          path: out/ClipMergeStudio-v3.4.apk
+          name: ClipMergeStudio-v3.5-APK
+          path: out/ClipMergeStudio-v3.5.apk
           if-no-files-found: error
           retention-days: 1
