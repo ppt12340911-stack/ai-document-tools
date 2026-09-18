@@ -108,120 +108,148 @@ jobs:
               if count != 1:
                   raise SystemExit('YouTube player origin patch failed')
 
-          # Add the scrolling containers as fields.
-          old_fields = '''    private lateinit var leftPanel: LinearLayout
-          private lateinit var rightPanel: LinearLayout
-          '''
-          new_fields = '''    private lateinit var leftPanel: LinearLayout
-          private lateinit var leftControlsScroll: ScrollView
-          private lateinit var leftControlsPanel: LinearLayout
-          private lateinit var rightScroll: ScrollView
-          private lateinit var rightPanel: LinearLayout
-          '''
-          if 'private lateinit var leftControlsScroll: ScrollView' not in s:
-              if old_fields not in s:
-                  raise SystemExit('left/right field block not found')
-              s = s.replace(old_fields, new_fields, 1)
+          # v3.3 scrolling fix. Support both known source layouts.
+          if 'private lateinit var leftPanel: LinearLayout' in s:
+              if 'private lateinit var leftControlsScroll: ScrollView' not in s:
+                  s = s.replace(
+                      '    private lateinit var leftPanel: LinearLayout\n',
+                      '    private lateinit var leftPanel: LinearLayout\n'
+                      '    private lateinit var leftControlsScroll: ScrollView\n'
+                      '    private lateinit var leftControlsPanel: LinearLayout\n'
+                      '    private lateinit var rightScroll: ScrollView\n',
+                      1,
+                  )
 
-          old_layout = '''        leftPanel = LinearLayout(this).apply {
-              orientation = LinearLayout.VERTICAL
-              setPadding(0, 0, dp(8), 0)
-          }
-          rightPanel = LinearLayout(this).apply {
-              orientation = LinearLayout.VERTICAL
-              setPadding(dp(8), 0, 0, 0)
-          }
-          mainLayout.addView(leftPanel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
-          mainLayout.addView(rightPanel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
-          '''
-          new_layout = '''        leftPanel = LinearLayout(this).apply {
-              orientation = LinearLayout.VERTICAL
-              setPadding(0, 0, dp(8), 0)
-          }
+              new_layout = '''        leftPanel = LinearLayout(this).apply {
+                  orientation = LinearLayout.VERTICAL
+                  setPadding(0, 0, dp(8), 0)
+              }
 
-          leftControlsScroll = ScrollView(this).apply {
-              isFillViewport = false
-              overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-          }
-          leftControlsPanel = LinearLayout(this).apply {
-              orientation = LinearLayout.VERTICAL
-              setPadding(0, 0, 0, dp(24))
-          }
-          leftControlsScroll.addView(
-              leftControlsPanel,
-              ScrollView.LayoutParams(
-                  ScrollView.LayoutParams.MATCH_PARENT,
-                  ScrollView.LayoutParams.WRAP_CONTENT
+              leftControlsScroll = ScrollView(this).apply {
+                  isFillViewport = false
+                  overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+              }
+              leftControlsPanel = LinearLayout(this).apply {
+                  orientation = LinearLayout.VERTICAL
+                  setPadding(0, 0, 0, dp(24))
+              }
+              leftControlsScroll.addView(
+                  leftControlsPanel,
+                  ScrollView.LayoutParams(
+                      ScrollView.LayoutParams.MATCH_PARENT,
+                      ScrollView.LayoutParams.WRAP_CONTENT
+                  )
               )
-          )
 
-          rightScroll = ScrollView(this).apply {
-              isFillViewport = true
-              overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-          }
-          rightPanel = LinearLayout(this).apply {
-              orientation = LinearLayout.VERTICAL
-              setPadding(dp(8), 0, 0, dp(28))
-          }
-          rightScroll.addView(
-              rightPanel,
-              ScrollView.LayoutParams(
-                  ScrollView.LayoutParams.MATCH_PARENT,
-                  ScrollView.LayoutParams.WRAP_CONTENT
+              rightScroll = ScrollView(this).apply {
+                  isFillViewport = true
+                  overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+              }
+              rightPanel = LinearLayout(this).apply {
+                  orientation = LinearLayout.VERTICAL
+                  setPadding(dp(8), 0, 0, dp(28))
+              }
+              rightScroll.addView(
+                  rightPanel,
+                  ScrollView.LayoutParams(
+                      ScrollView.LayoutParams.MATCH_PARENT,
+                      ScrollView.LayoutParams.WRAP_CONTENT
+                  )
               )
-          )
 
-          mainLayout.addView(leftPanel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
-          mainLayout.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
-          '''
-          if 'rightScroll = ScrollView(this)' not in s:
-              if old_layout not in s:
-                  raise SystemExit('main left/right layout block not found')
-              s = s.replace(old_layout, new_layout, 1)
+              mainLayout.addView(leftPanel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
+              mainLayout.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))'''
 
-          old_controls_anchor = '        leftPanel.addView(fullscreenControls, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(62)))\n\n        timeRow = LinearLayout(this).apply {'
-          new_controls_anchor = '''        leftPanel.addView(fullscreenControls, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(62)))
-          leftPanel.addView(leftControlsScroll, LinearLayout.LayoutParams(
-              LinearLayout.LayoutParams.MATCH_PARENT,
-              0,
-              1f
-          ))
+              s, layout_count = re.subn(
+                  r'        leftPanel = LinearLayout\(this\)\.apply \{[\s\S]*?mainLayout\.addView\(rightPanel,\s*LinearLayout\.LayoutParams\(0,\s*LinearLayout\.LayoutParams\.MATCH_PARENT,\s*1f\)\)',
+                  new_layout,
+                  s,
+                  count=1,
+              )
+              if layout_count != 1:
+                  raise SystemExit('field-based left/right layout block not found')
 
-          timeRow = LinearLayout(this).apply {'''
-          if 'leftPanel.addView(leftControlsScroll' not in s:
-              if old_controls_anchor not in s:
-                  raise SystemExit('left controls anchor not found')
-              s = s.replace(old_controls_anchor, new_controls_anchor, 1)
+              if 'leftPanel.addView(leftControlsScroll' not in s:
+                  s, anchor_count = re.subn(
+                      r'(        leftPanel\.addView\(fullscreenControls,\s*LinearLayout\.LayoutParams\(LinearLayout\.LayoutParams\.MATCH_PARENT,\s*dp\(62\)\)\)\n)',
+                      r'''\1        leftPanel.addView(leftControlsScroll, LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT,
+                  0,
+                  1f
+              ))
+          ''',
+                      s,
+                      count=1,
+                  )
+                  if anchor_count != 1:
+                      raise SystemExit('fullscreen controls anchor not found')
 
-          for name in ('timeRow', 'setRow', 'speedRow', 'addRow'):
-              s = s.replace(f'        leftPanel.addView({name})', f'        leftControlsPanel.addView({name})', 1)
+              for name in ('timeRow', 'setRow', 'speedRow', 'addRow'):
+                  s = s.replace(f'        leftPanel.addView({name})', f'        leftControlsPanel.addView({name})', 1)
 
-          old_list = '        rightPanel.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))'
-          if old_list in s:
-              s = s.replace(
-                  old_list,
+              s = re.sub(
+                  r'        rightPanel\.addView\(segmentList,\s*LinearLayout\.LayoutParams\(LinearLayout\.LayoutParams\.MATCH_PARENT,\s*0,\s*1f\)\)',
                   '        rightPanel.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(210)))',
-                  1,
+                  s,
+                  count=1,
               )
+              s = s.replace('        rightPanel.visibility = View.GONE\n', '        rightScroll.visibility = View.GONE\n', 1)
+              s = s.replace('        rightPanel.visibility = View.VISIBLE\n', '        rightScroll.visibility = View.VISIBLE\n', 1)
 
-          s = s.replace('        rightPanel.visibility = View.GONE\n', '        rightScroll.visibility = View.GONE\n', 1)
-          s = s.replace('        rightPanel.visibility = View.VISIBLE\n', '        rightScroll.visibility = View.VISIBLE\n', 1)
-
-          old_hide = '''        timeRow.visibility = View.GONE
-          setRow.visibility = View.GONE
-          speedRow.visibility = View.GONE
-          addRow.visibility = View.GONE
-          '''
-          if old_hide in s:
-              s = s.replace(old_hide, '        leftControlsScroll.visibility = View.GONE\n', 1)
-
-          old_show = '''        timeRow.visibility = View.VISIBLE
-          setRow.visibility = View.VISIBLE
-          speedRow.visibility = View.VISIBLE
-          addRow.visibility = View.VISIBLE
-          '''
-          if old_show in s:
-              s = s.replace(old_show, '        leftControlsScroll.visibility = View.VISIBLE\n', 1)
+              s = re.sub(
+                  r'        timeRow\.visibility = View\.GONE\n        setRow\.visibility = View\.GONE\n        speedRow\.visibility = View\.GONE\n        addRow\.visibility = View\.GONE\n',
+                  '        leftControlsScroll.visibility = View.GONE\n',
+                  s,
+                  count=1,
+              )
+              s = re.sub(
+                  r'        timeRow\.visibility = View\.VISIBLE\n        setRow\.visibility = View\.VISIBLE\n        speedRow\.visibility = View\.VISIBLE\n        addRow\.visibility = View\.VISIBLE\n',
+                  '        leftControlsScroll.visibility = View.VISIBLE\n',
+                  s,
+                  count=1,
+              )
+          else:
+              # Older source layout: wrap the left and right columns directly.
+              new_cols = '''        val leftScroll = ScrollView(this).apply {
+                  isFillViewport = true
+                  overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+              }
+              val rightScroll = ScrollView(this).apply {
+                  isFillViewport = true
+                  overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+              }
+              val left = LinearLayout(this).apply {
+                  orientation = LinearLayout.VERTICAL
+                  setPadding(0, 0, dp(8), dp(24))
+              }
+              val right = LinearLayout(this).apply {
+                  orientation = LinearLayout.VERTICAL
+                  setPadding(dp(8), 0, 0, dp(24))
+              }
+              leftScroll.addView(left, ScrollView.LayoutParams(
+                  ScrollView.LayoutParams.MATCH_PARENT,
+                  ScrollView.LayoutParams.WRAP_CONTENT
+              ))
+              rightScroll.addView(right, ScrollView.LayoutParams(
+                  ScrollView.LayoutParams.MATCH_PARENT,
+                  ScrollView.LayoutParams.WRAP_CONTENT
+              ))
+              main.addView(leftScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
+              main.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))'''
+              s, layout_count = re.subn(
+                  r'        val left = LinearLayout\(this\)\.apply \{[\s\S]*?main\.addView\(right,\s*LinearLayout\.LayoutParams\(0,\s*LinearLayout\.LayoutParams\.MATCH_PARENT,\s*1f\)\)',
+                  new_cols,
+                  s,
+                  count=1,
+              )
+              if layout_count != 1:
+                  raise SystemExit('legacy left/right layout block not found')
+              s = re.sub(
+                  r'        right\.addView\(segmentList,\s*LinearLayout\.LayoutParams\(LinearLayout\.LayoutParams\.MATCH_PARENT,\s*0,\s*1f\)\)',
+                  '        right.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(220)))',
+                  s,
+                  count=1,
+              )
 
           s = s.replace('text = "💃 YouTube 練舞剪輯 v3.2"', 'text = "💃 YouTube 練舞剪輯 v3.3"', 1)
           s = s.replace('text = "💃 YouTube 練舞剪輯 v3.1"', 'text = "💃 YouTube 練舞剪輯 v3.3"', 1)
