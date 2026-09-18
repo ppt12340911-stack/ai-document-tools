@@ -1,4 +1,4 @@
-name: Build ClipMerge Studio v3.3 APK
+name: Build ClipMerge Studio v3.4 APK
 on:
   push:
     branches: [build-clipmerge-apk]
@@ -28,7 +28,7 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Prepare v3.3 project
+      - name: Prepare v3.4 project
         run: |
           cat .chatgpt-build/clipmerge/v28_final/part00.txt \
               .chatgpt-build/clipmerge/v28_final/part01.txt \
@@ -108,7 +108,7 @@ jobs:
               if count != 1:
                   raise SystemExit('YouTube player origin patch failed')
 
-          # v3.3 scrolling fix. Support both known source layouts.
+          # v3.4 scrolling fix. Support both known source layouts.
           if 'private lateinit var leftPanel: LinearLayout' in s:
               if 'private lateinit var leftControlsScroll: ScrollView' not in s:
                   s = s.replace(
@@ -251,8 +251,68 @@ jobs:
                   count=1,
               )
 
-          s = s.replace('text = "💃 YouTube 練舞剪輯 v3.2"', 'text = "💃 YouTube 練舞剪輯 v3.3"', 1)
-          s = s.replace('text = "💃 YouTube 練舞剪輯 v3.1"', 'text = "💃 YouTube 練舞剪輯 v3.3"', 1)
+          # v3.4: make the left control area visibly scrollable on short/wide screens.
+          # The previous fixed 300dp player could consume almost all vertical space.
+          if 'private lateinit var leftControlsScroll: ScrollView' in s:
+              old_web = '        leftPanel.addView(webView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(300)))'
+              new_web = '''        leftPanel.addView(webView, LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT,
+                  0,
+                  0.58f
+              ))'''
+              if old_web not in s:
+                  raise SystemExit('v3.4 webView layout anchor not found')
+              s = s.replace(old_web, new_web, 1)
+
+              old_scroll = '''        leftPanel.addView(leftControlsScroll, LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT,
+                  0,
+                  1f
+              ))'''
+              new_scroll = '''        leftPanel.addView(leftControlsScroll, LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT,
+                  0,
+                  0.42f
+              ))'''
+              if old_scroll not in s:
+                  raise SystemExit('v3.4 left scroll layout anchor not found')
+              s = s.replace(old_scroll, new_scroll, 1)
+
+              s = s.replace(
+                  '''            isFillViewport = false
+                  overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS''',
+                  '''            isFillViewport = true
+                  isVerticalScrollBarEnabled = true
+                  isScrollbarFadingEnabled = false
+                  overScrollMode = View.OVER_SCROLL_ALWAYS''',
+                  1,
+              )
+
+              old_exit = '''        webView.layoutParams = LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT,
+                  dp(300)
+              )
+              leftControlsScroll.layoutParams = LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT,
+                  0,
+                  1f
+              )'''
+              new_exit = '''        webView.layoutParams = LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT,
+                  0,
+                  0.58f
+              )
+              leftControlsScroll.layoutParams = LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT,
+                  0,
+                  0.42f
+              )'''
+              if old_exit not in s:
+                  raise SystemExit('v3.4 fullscreen exit layout anchor not found')
+              s = s.replace(old_exit, new_exit, 1)
+
+          s = s.replace('text = "💃 YouTube 練舞剪輯 v3.3"', 'text = "💃 YouTube 練舞剪輯 v3.4"', 1)
+
           s = s.replace(
               'text = "最快方式：YouTube 影片或播放清單 → 分享 → YouTube 練舞。練習時可按「⛶ 全螢幕」。"',
               'text = "最快方式：YouTube 影片或播放清單 → 分享 → YouTube 練舞。左右操作區可上下滑動；練習時可按「⛶ 全螢幕」。"',
@@ -265,7 +325,7 @@ jobs:
 
           main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
           ms = main.read_text(encoding='utf-8')
-          ms = re.sub(r'ClipMerge 爆笑剪片工坊\s+v\d+\.\d+', 'ClipMerge 爆笑剪片工坊  v3.3', ms)
+          ms = re.sub(r'ClipMerge 爆笑剪片工坊\s+v\d+\.\d+', 'ClipMerge 爆笑剪片工坊  v3.4', ms)
           main.write_text(ms, encoding='utf-8')
           PY
 
@@ -288,8 +348,8 @@ jobs:
                   applicationId = "com.clipmerge.studio"
                   minSdk = 26
                   targetSdk = 36
-                  versionCode = 13
-                  versionName = "3.3"
+                  versionCode = 14
+                  versionName = "3.4"
               }
 
               buildFeatures { buildConfig = true }
@@ -313,7 +373,9 @@ jobs:
           grep -q 'https://com.clipmerge.studio/' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
           grep -q 'leftControlsScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
           grep -q 'rightScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'YouTube 練舞剪輯 v3.3' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q '0.58f' .chatgpt-build/clipmerge-v34-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q '0.42f' .chatgpt-build/clipmerge-v34-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'YouTube 練舞剪輯 v3.4' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
       - name: Build debug APK
         working-directory: .chatgpt-build/clipmerge-v33-src
@@ -322,12 +384,12 @@ jobs:
       - name: Copy APK
         run: |
           mkdir -p out
-          cp .chatgpt-build/clipmerge-v33-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v3.3.apk
+          cp .chatgpt-build/clipmerge-v33-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v3.4.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ClipMergeStudio-v3.3-APK
-          path: out/ClipMergeStudio-v3.3.apk
+          name: ClipMergeStudio-v3.4-APK
+          path: out/ClipMergeStudio-v3.4.apk
           if-no-files-found: error
           retention-days: 1
