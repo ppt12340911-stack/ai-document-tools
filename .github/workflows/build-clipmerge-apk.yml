@@ -288,18 +288,18 @@ jobs:
                   1,
               )
 
-              old_exit_web = '''        webView.layoutParams = LinearLayout.LayoutParams(
-                  LinearLayout.LayoutParams.MATCH_PARENT,
-                  dp(300)
-              )'''
-              new_exit_web = '''        webView.layoutParams = LinearLayout.LayoutParams(
+              # Restore the same proportions after leaving full screen. Older source
+              # variants format this block differently, so use a whitespace-tolerant regex.
+              s, _ = re.subn(
+                  r'        webView\.layoutParams\s*=\s*LinearLayout\.LayoutParams\(\s*LinearLayout\.LayoutParams\.MATCH_PARENT\s*,\s*dp\(300\)\s*\)',
+                  '''        webView.layoutParams = LinearLayout.LayoutParams(
                   LinearLayout.LayoutParams.MATCH_PARENT,
                   0,
                   0.58f
-              )'''
-              if old_exit_web not in s:
-                  raise SystemExit('v3.4 fullscreen exit webView anchor not found')
-              s = s.replace(old_exit_web, new_exit_web, 1)
+              )''',
+                  s,
+                  count=1,
+              )
 
           s = s.replace('text = "💃 YouTube 練舞剪輯 v3.1"', 'text = "💃 YouTube 練舞剪輯 v3.4"', 1)
           s = s.replace('text = "💃 YouTube 練舞剪輯 v3.2"', 'text = "💃 YouTube 練舞剪輯 v3.4"', 1)
