@@ -45,12 +45,11 @@ jobs:
           mkdir -p .chatgpt-build/clipmerge-v33-src
           unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v33-src
 
-          cat .chatgpt-build/clipmerge/v31/dance_part0.txt \
-              .chatgpt-build/clipmerge/v31/dance_part1.txt \
-              .chatgpt-build/clipmerge/v31/dance_part2.txt \
-              .chatgpt-build/clipmerge/v31/dance_part3.txt > /tmp/dance_v31.b64
-          test "$(wc -c < /tmp/dance_v31.b64)" -eq 11928
-          base64 -d /tmp/dance_v31.b64 | gzip -d > .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          cat .chatgpt-build/clipmerge/v33/dance_part0.txt \
+              .chatgpt-build/clipmerge/v33/dance_part1.txt \
+              .chatgpt-build/clipmerge/v33/dance_part2.txt \
+              .chatgpt-build/clipmerge/v33/dance_part3.txt > /tmp/dance_v33.b64
+          base64 -d /tmp/dance_v33.b64 | gzip -d > .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
           python3 - <<'PY'
           from pathlib import Path
@@ -85,80 +84,9 @@ jobs:
               raise SystemExit('DancePracticeActivity manifest block not found')
           manifest.write_text(m2, encoding='utf-8')
 
-          dance = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
-          s = dance.read_text(encoding='utf-8')
-
-          # Preserve the v3.2 YouTube WebView embed fix.
-          s, base_count = re.subn(
-              r'webView\.loadDataWithBaseURL\(\s*"https://www\.youtube\.com"',
-              'webView.loadDataWithBaseURL("https://com.clipmerge.studio/"',
-              s,
-              count=1,
-          )
-          if base_count != 1:
-              raise SystemExit('YouTube WebView base URL patch did not match')
-          if "origin:'https://com.clipmerge.studio'" not in s:
-              s, origin_count = re.subn(
-                  r'(playerVars\s*:\s*\{)',
-                  r"\1origin:'https://com.clipmerge.studio',",
-                  s,
-                  count=1,
-              )
-              if origin_count != 1:
-                  raise SystemExit('YouTube playerVars origin patch did not match')
-
-          # v3.3: make left and right panels independently vertically scrollable.
-          new_cols = '''        val leftScroll = ScrollView(this).apply {
-              isFillViewport = true
-              overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-          }
-          val rightScroll = ScrollView(this).apply {
-              isFillViewport = true
-              overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-          }
-          val left = LinearLayout(this).apply {
-              orientation = LinearLayout.VERTICAL
-              setPadding(0, 0, dp(8), dp(24))
-          }
-          val right = LinearLayout(this).apply {
-              orientation = LinearLayout.VERTICAL
-              setPadding(dp(8), 0, 0, dp(24))
-          }
-          leftScroll.addView(left, FrameLayout.LayoutParams(
-              FrameLayout.LayoutParams.MATCH_PARENT,
-              FrameLayout.LayoutParams.WRAP_CONTENT
-          ))
-          rightScroll.addView(right, FrameLayout.LayoutParams(
-              FrameLayout.LayoutParams.MATCH_PARENT,
-              FrameLayout.LayoutParams.WRAP_CONTENT
-          ))
-          main.addView(leftScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
-          main.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))'''
-
-          s, cols_count = re.subn(
-              r'\s*val left = LinearLayout\(this\)\.apply \{[\s\S]*?main\.addView\(right,\s*LinearLayout\.LayoutParams\(0,\s*LinearLayout\.LayoutParams\.MATCH_PARENT,\s*1f\)\)',
-              '\n' + new_cols,
-              s,
-              count=1,
-          )
-          if cols_count != 1:
-              raise SystemExit('column block not found for scroll patch')
-
-          s, list_count = re.subn(
-              r'right\.addView\(segmentList,\s*LinearLayout\.LayoutParams\(\s*LinearLayout\.LayoutParams\.MATCH_PARENT,\s*0,\s*1f\s*\)\)',
-              'right.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(210)))',
-              s,
-              count=1,
-          )
-          if list_count != 1:
-              raise SystemExit('segment list layout block not found')
-
-          s = s.replace('💃 YouTube 練舞剪輯 v3.1', '💃 YouTube 練舞剪輯 v3.3')
-          dance.write_text(s, encoding='utf-8')
-
           main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
           ms = main.read_text(encoding='utf-8')
-          ms = ms.replace('ClipMerge 爆笑剪片工坊  v2.8', 'ClipMerge 爆笑剪片工坊  v3.3')
+          ms = re.sub(r'ClipMerge 爆笑剪片工坊\s+v\d+\.\d+', 'ClipMerge 爆笑剪片工坊  v3.3', ms)
           main.write_text(ms, encoding='utf-8')
           PY
 
@@ -203,10 +131,9 @@ jobs:
           EOF
 
           sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v33-src/gradle.properties
-          grep -q 'https://com.clipmerge.studio/' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'val leftScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'val rightScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'dp(210)' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'leftControlsScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'rightScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'YouTube 練舞剪輯 v3.3' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
       - name: Build debug APK
         working-directory: .chatgpt-build/clipmerge-v33-src
