@@ -1,0 +1,139 @@
+workflows:
+  android-debug-apk:
+    name: ClipMerge Studio v3.3 APK
+    max_build_duration: 30
+    environment:
+      java: 17
+    scripts:
+      - name: Reconstruct ClipMerge v3.3 project
+        script: |
+          cd "$CM_BUILD_DIR"
+
+          cat .chatgpt-build/clipmerge/v28_final/part00.txt \
+              .chatgpt-build/clipmerge/v28_final/part01.txt \
+              .chatgpt-build/clipmerge/v28_final/part02.txt \
+              .chatgpt-build/clipmerge/v28_final/part03.txt \
+              .chatgpt-build/clipmerge/v28_final/part04.txt \
+              .chatgpt-build/clipmerge/v28_final/part05.txt \
+              .chatgpt-build/clipmerge/v28_final/part06.txt \
+              .chatgpt-build/clipmerge/v28_final/part07.txt > /tmp/clipmerge_v28.b64
+
+          base64 -d /tmp/clipmerge_v28.b64 > /tmp/clipmerge_v28.zip
+          rm -rf clipmerge-app
+          mkdir -p clipmerge-app
+          unzip -q -o /tmp/clipmerge_v28.zip -d clipmerge-app
+
+          cat .chatgpt-build/clipmerge/v33/dance_part0.txt \
+              .chatgpt-build/clipmerge/v33/dance_part1.txt \
+              .chatgpt-build/clipmerge/v33/dance_part2.txt \
+              .chatgpt-build/clipmerge/v33/dance_part3.txt > /tmp/dance_v33.b64
+
+          base64 -d /tmp/dance_v33.b64 | gzip -d > clipmerge-app/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path("clipmerge-app")
+
+          manifest = root / "app/src/main/AndroidManifest.xml"
+          m = manifest.read_text(encoding="utf-8")
+          replacement = """
+                  <activity
+                      android:name=".DancePracticeActivity"
+                      android:configChanges="keyboardHidden|orientation|screenSize"
+                      android:screenOrientation="landscape"
+                      android:launchMode="singleTop"
+                      android:exported="true"
+                      android:label="YouTube 練舞"
+                      android:theme="@android:style/Theme.Material.Light.NoActionBar">
+                      <intent-filter>
+                          <action android:name="android.intent.action.SEND" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <data android:mimeType="text/plain" />
+                      </intent-filter>
+                  </activity>"""
+          m2, n = re.subn(
+              r'\s*<activity\s+android:name="\.DancePracticeActivity"[\s\S]*?(?:</activity>|/>)',
+              replacement,
+              m,
+              count=1,
+          )
+          if n != 1:
+              raise SystemExit("DancePracticeActivity manifest block not found")
+          manifest.write_text(m2, encoding="utf-8")
+
+          main = root / "app/src/main/java/com/clipmerge/studio/MainActivity.kt"
+          ms = main.read_text(encoding="utf-8")
+          ms = re.sub(
+              r'ClipMerge 爆笑剪片工坊\s+v\d+\.\d+',
+              'ClipMerge 爆笑剪片工坊  v3.3',
+              ms,
+          )
+          main.write_text(ms, encoding="utf-8")
+          PY
+
+          cat > clipmerge-app/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "9.4.0" apply false
+          }
+          EOF
+
+          cat > clipmerge-app/app/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application")
+          }
+
+          android {
+              namespace = "com.clipmerge.studio"
+              compileSdk = 36
+
+              defaultConfig {
+                  applicationId = "com.clipmerge.studio"
+                  minSdk = 26
+                  targetSdk = 36
+                  versionCode = 13
+                  versionName = "3.3"
+              }
+
+              buildFeatures { buildConfig = true }
+
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+          }
+
+          dependencies {
+              val media3 = "1.11.0"
+              implementation("androidx.media3:media3-common:$media3")
+              implementation("androidx.media3:media3-exoplayer:$media3")
+              implementation("androidx.media3:media3-ui:$media3")
+              implementation("androidx.media3:media3-transformer:$media3")
+          }
+          EOF
+
+          sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' clipmerge-app/gradle.properties
+
+      - name: Prepare Android SDK
+        script: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install Gradle 9.6
+        script: |
+          curl -L --retry 3 -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-9.6.0-bin.zip
+          rm -rf /tmp/gradle-9.6.0
+          unzip -q -o /tmp/gradle.zip -d /tmp
+          /tmp/gradle-9.6.0/bin/gradle --version
+
+      - name: Build APK
+        script: |
+          cd "$CM_BUILD_DIR/clipmerge-app"
+          /tmp/gradle-9.6.0/bin/gradle --no-daemon --stacktrace :app:assembleDebug
+          mkdir -p "$CM_BUILD_DIR/build-artifacts"
+          cp app/build/outputs/apk/debug/app-debug.apk "$CM_BUILD_DIR/build-artifacts/ClipMergeStudio-v3.3.apk"
+
+    artifacts:
+      - build-artifacts/ClipMergeStudio-v3.3.apk
+      - clipmerge-app/app/build/outputs/**/*.apk
