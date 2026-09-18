@@ -135,9 +135,9 @@ jobs:
               }
               leftControlsScroll.addView(
                   leftControlsPanel,
-                  ScrollView.LayoutParams(
-                      ScrollView.LayoutParams.MATCH_PARENT,
-                      ScrollView.LayoutParams.WRAP_CONTENT
+                  FrameLayout.LayoutParams(
+                      FrameLayout.LayoutParams.MATCH_PARENT,
+                      FrameLayout.LayoutParams.WRAP_CONTENT
                   )
               )
 
@@ -151,9 +151,9 @@ jobs:
               }
               rightScroll.addView(
                   rightPanel,
-                  ScrollView.LayoutParams(
-                      ScrollView.LayoutParams.MATCH_PARENT,
-                      ScrollView.LayoutParams.WRAP_CONTENT
+                  FrameLayout.LayoutParams(
+                      FrameLayout.LayoutParams.MATCH_PARENT,
+                      FrameLayout.LayoutParams.WRAP_CONTENT
                   )
               )
 
@@ -226,13 +226,13 @@ jobs:
                   orientation = LinearLayout.VERTICAL
                   setPadding(dp(8), 0, 0, dp(24))
               }
-              leftScroll.addView(left, ScrollView.LayoutParams(
-                  ScrollView.LayoutParams.MATCH_PARENT,
-                  ScrollView.LayoutParams.WRAP_CONTENT
+              leftScroll.addView(left, FrameLayout.LayoutParams(
+                  FrameLayout.LayoutParams.MATCH_PARENT,
+                  FrameLayout.LayoutParams.WRAP_CONTENT
               ))
-              rightScroll.addView(right, ScrollView.LayoutParams(
-                  ScrollView.LayoutParams.MATCH_PARENT,
-                  ScrollView.LayoutParams.WRAP_CONTENT
+              rightScroll.addView(right, FrameLayout.LayoutParams(
+                  FrameLayout.LayoutParams.MATCH_PARENT,
+                  FrameLayout.LayoutParams.WRAP_CONTENT
               ))
               main.addView(leftScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
               main.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))'''
