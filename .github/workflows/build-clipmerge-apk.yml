@@ -45,7 +45,6 @@ jobs:
           mkdir -p .chatgpt-build/clipmerge-v33-src
           unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v33-src
 
-          # v3.1 is a known-good complete DancePracticeActivity source.
           cat .chatgpt-build/clipmerge/v31/dance_part0.txt \
               .chatgpt-build/clipmerge/v31/dance_part1.txt \
               .chatgpt-build/clipmerge/v31/dance_part2.txt \
@@ -59,7 +58,6 @@ jobs:
 
           root = Path('.chatgpt-build/clipmerge-v33-src')
 
-          # Ensure the YouTube share target exists and opens the dance screen directly.
           manifest = root / 'app/src/main/AndroidManifest.xml'
           m = manifest.read_text(encoding='utf-8')
           replacement = '''
@@ -90,78 +88,152 @@ jobs:
           dance = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
           s = dance.read_text(encoding='utf-8')
 
-          # v3.2 YouTube iframe / referer fix.
+          # Keep the v3.2 YouTube embed fix, whether already present or not.
           old_base = 'webView.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)'
-          new_base = 'webView.loadDataWithBaseURL("https://com.clipmerge.studio/", html, "text/html", "UTF-8", null)'
-          if old_base not in s:
-              raise SystemExit('YouTube WebView base URL not found')
-          s = s.replace(old_base, new_base, 1)
+          if old_base in s:
+              s = s.replace(
+                  old_base,
+                  'webView.loadDataWithBaseURL("https://com.clipmerge.studio/", html, "text/html", "UTF-8", null)',
+                  1,
+              )
+          if 'https://com.clipmerge.studio/' not in s:
+              raise SystemExit('YouTube WebView origin/base URL missing')
 
-          old_vars = "playerVars:{playsinline:1,controls:1,rel:0}"
-          new_vars = "playerVars:{playsinline:1,controls:1,rel:0,origin:'https://com.clipmerge.studio'}"
-          if old_vars not in s:
-              raise SystemExit('YouTube playerVars not found')
-          s = s.replace(old_vars, new_vars, 1)
+          if "origin:'https://com.clipmerge.studio'" not in s:
+              s, count = re.subn(
+                  r'(playerVars\s*:\s*\{)',
+                  r"\1origin:'https://com.clipmerge.studio',",
+                  s,
+                  count=1,
+              )
+              if count != 1:
+                  raise SystemExit('YouTube player origin patch failed')
 
-          # v3.3: make both operation areas independently vertically scrollable.
-          old_cols = '''        val left = LinearLayout(this).apply {
+          # Add the scrolling containers as fields.
+          old_fields = '''    private lateinit var leftPanel: LinearLayout
+          private lateinit var rightPanel: LinearLayout
+          '''
+          new_fields = '''    private lateinit var leftPanel: LinearLayout
+          private lateinit var leftControlsScroll: ScrollView
+          private lateinit var leftControlsPanel: LinearLayout
+          private lateinit var rightScroll: ScrollView
+          private lateinit var rightPanel: LinearLayout
+          '''
+          if 'private lateinit var leftControlsScroll: ScrollView' not in s:
+              if old_fields not in s:
+                  raise SystemExit('left/right field block not found')
+              s = s.replace(old_fields, new_fields, 1)
+
+          old_layout = '''        leftPanel = LinearLayout(this).apply {
               orientation = LinearLayout.VERTICAL
               setPadding(0, 0, dp(8), 0)
           }
-          val right = LinearLayout(this).apply {
+          rightPanel = LinearLayout(this).apply {
               orientation = LinearLayout.VERTICAL
               setPadding(dp(8), 0, 0, 0)
           }
-          main.addView(left, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
-          main.addView(right, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+          mainLayout.addView(leftPanel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
+          mainLayout.addView(rightPanel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
           '''
-          new_cols = '''        val leftScroll = ScrollView(this).apply {
+          new_layout = '''        leftPanel = LinearLayout(this).apply {
+              orientation = LinearLayout.VERTICAL
+              setPadding(0, 0, dp(8), 0)
+          }
+
+          leftControlsScroll = ScrollView(this).apply {
+              isFillViewport = false
+              overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+          }
+          leftControlsPanel = LinearLayout(this).apply {
+              orientation = LinearLayout.VERTICAL
+              setPadding(0, 0, 0, dp(24))
+          }
+          leftControlsScroll.addView(
+              leftControlsPanel,
+              ScrollView.LayoutParams(
+                  ScrollView.LayoutParams.MATCH_PARENT,
+                  ScrollView.LayoutParams.WRAP_CONTENT
+              )
+          )
+
+          rightScroll = ScrollView(this).apply {
               isFillViewport = true
               overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
           }
-          val rightScroll = ScrollView(this).apply {
-              isFillViewport = true
-              overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-          }
-          val left = LinearLayout(this).apply {
+          rightPanel = LinearLayout(this).apply {
               orientation = LinearLayout.VERTICAL
-              setPadding(0, 0, dp(8), dp(24))
+              setPadding(dp(8), 0, 0, dp(28))
           }
-          val right = LinearLayout(this).apply {
-              orientation = LinearLayout.VERTICAL
-              setPadding(dp(8), 0, 0, dp(24))
-          }
-          leftScroll.addView(left, ScrollView.LayoutParams(
-              ScrollView.LayoutParams.MATCH_PARENT,
-              ScrollView.LayoutParams.WRAP_CONTENT
-          ))
-          rightScroll.addView(right, ScrollView.LayoutParams(
-              ScrollView.LayoutParams.MATCH_PARENT,
-              ScrollView.LayoutParams.WRAP_CONTENT
-          ))
-          main.addView(leftScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
-          main.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+          rightScroll.addView(
+              rightPanel,
+              ScrollView.LayoutParams(
+                  ScrollView.LayoutParams.MATCH_PARENT,
+                  ScrollView.LayoutParams.WRAP_CONTENT
+              )
+          )
+
+          mainLayout.addView(leftPanel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.42f))
+          mainLayout.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
           '''
-          if old_cols not in s:
-              raise SystemExit('left/right panel block not found')
-          s = s.replace(old_cols, new_cols, 1)
+          if 'rightScroll = ScrollView(this)' not in s:
+              if old_layout not in s:
+                  raise SystemExit('main left/right layout block not found')
+              s = s.replace(old_layout, new_layout, 1)
 
-          old_list = '        right.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))'
-          new_list = '        right.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(220)))'
-          if old_list not in s:
-              raise SystemExit('segment list layout not found')
-          s = s.replace(old_list, new_list, 1)
+          old_controls_anchor = '        leftPanel.addView(fullscreenControls, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(62)))\n\n        timeRow = LinearLayout(this).apply {'
+          new_controls_anchor = '''        leftPanel.addView(fullscreenControls, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(62)))
+          leftPanel.addView(leftControlsScroll, LinearLayout.LayoutParams(
+              LinearLayout.LayoutParams.MATCH_PARENT,
+              0,
+              1f
+          ))
 
+          timeRow = LinearLayout(this).apply {'''
+          if 'leftPanel.addView(leftControlsScroll' not in s:
+              if old_controls_anchor not in s:
+                  raise SystemExit('left controls anchor not found')
+              s = s.replace(old_controls_anchor, new_controls_anchor, 1)
+
+          for name in ('timeRow', 'setRow', 'speedRow', 'addRow'):
+              s = s.replace(f'        leftPanel.addView({name})', f'        leftControlsPanel.addView({name})', 1)
+
+          old_list = '        rightPanel.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))'
+          if old_list in s:
+              s = s.replace(
+                  old_list,
+                  '        rightPanel.addView(segmentList, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(210)))',
+                  1,
+              )
+
+          s = s.replace('        rightPanel.visibility = View.GONE\n', '        rightScroll.visibility = View.GONE\n', 1)
+          s = s.replace('        rightPanel.visibility = View.VISIBLE\n', '        rightScroll.visibility = View.VISIBLE\n', 1)
+
+          old_hide = '''        timeRow.visibility = View.GONE
+          setRow.visibility = View.GONE
+          speedRow.visibility = View.GONE
+          addRow.visibility = View.GONE
+          '''
+          if old_hide in s:
+              s = s.replace(old_hide, '        leftControlsScroll.visibility = View.GONE\n', 1)
+
+          old_show = '''        timeRow.visibility = View.VISIBLE
+          setRow.visibility = View.VISIBLE
+          speedRow.visibility = View.VISIBLE
+          addRow.visibility = View.VISIBLE
+          '''
+          if old_show in s:
+              s = s.replace(old_show, '        leftControlsScroll.visibility = View.VISIBLE\n', 1)
+
+          s = s.replace('text = "💃 YouTube 練舞剪輯 v3.2"', 'text = "💃 YouTube 練舞剪輯 v3.3"', 1)
+          s = s.replace('text = "💃 YouTube 練舞剪輯 v3.1"', 'text = "💃 YouTube 練舞剪輯 v3.3"', 1)
           s = s.replace(
-              'text = "💃 YouTube 練舞剪輯 v3.1"',
-              'text = "💃 YouTube 練舞剪輯 v3.3"',
+              'text = "最快方式：YouTube 影片或播放清單 → 分享 → YouTube 練舞。練習時可按「⛶ 全螢幕」。"',
+              'text = "最快方式：YouTube 影片或播放清單 → 分享 → YouTube 練舞。左右操作區可上下滑動；練習時可按「⛶ 全螢幕」。"',
               1,
           )
-          s = s.replace(
-              'text = "最快方式：YouTube 影片或播放清單 → 分享 → YouTube 練舞。也可貼上網址，或按「📋 貼上」。"',
-              'text = "最快方式：YouTube 影片或播放清單 → 分享 → YouTube 練舞。左右操作區可上下滑動；也可按「📋 貼上」。"',
-              1,
-          )
+
+          if 'leftControlsScroll' not in s or 'rightScroll' not in s:
+              raise SystemExit('scroll containers were not applied')
           dance.write_text(s, encoding='utf-8')
 
           main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
@@ -212,8 +284,8 @@ jobs:
 
           sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v33-src/gradle.properties
           grep -q 'https://com.clipmerge.studio/' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'val leftScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'val rightScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'leftControlsScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'rightScroll = ScrollView' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
           grep -q 'YouTube 練舞剪輯 v3.3' .chatgpt-build/clipmerge-v33-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
       - name: Build debug APK
