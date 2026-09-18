@@ -1,0 +1,49 @@
+name: Export ClipMerge v3.5 Source
+on:
+  push:
+    branches: [build-clipmerge-apk]
+    paths:
+      - '.github/workflows/export-v35-source.yml'
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct v3.5 source
+        run: |
+          cat .chatgpt-build/clipmerge/v28_final/part00.txt \
+              .chatgpt-build/clipmerge/v28_final/part01.txt \
+              .chatgpt-build/clipmerge/v28_final/part02.txt \
+              .chatgpt-build/clipmerge/v28_final/part03.txt \
+              .chatgpt-build/clipmerge/v28_final/part04.txt \
+              .chatgpt-build/clipmerge/v28_final/part05.txt \
+              .chatgpt-build/clipmerge/v28_final/part06.txt \
+              .chatgpt-build/clipmerge/v28_final/part07.txt > /tmp/base.b64
+          base64 -d /tmp/base.b64 > /tmp/base.zip
+          mkdir -p ClipMergeStudio-v3.5-source
+          unzip -q -o /tmp/base.zip -d ClipMergeStudio-v3.5-source
+
+          cat .chatgpt-build/clipmerge/v35/dance_part0.txt \
+              .chatgpt-build/clipmerge/v35/dance_part1.txt \
+              .chatgpt-build/clipmerge/v35/dance_part2.txt \
+              .chatgpt-build/clipmerge/v35/dance_part3.txt > /tmp/dance.b64
+          base64 -d /tmp/dance.b64 | gzip -d > ClipMergeStudio-v3.5-source/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('ClipMergeStudio-v3.5-source')
+          main=root/'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
+          s=main.read_text(encoding='utf-8')
+          s=re.sub(r'ClipMerge 爆笑剪片工坊\s+v\d+\.\d+','ClipMerge 爆笑剪片工坊  v3.5',s)
+          main.write_text(s,encoding='utf-8')
+          PY
+
+          zip -r ClipMergeStudio-v3.5-source.zip ClipMergeStudio-v3.5-source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClipMergeStudio-v3.5-source
+          path: ClipMergeStudio-v3.5-source.zip
+          retention-days: 1
