@@ -1,0 +1,47 @@
+name: Export Gradle 9.6 Wrapper
+on:
+  push:
+    branches: [build-clipmerge-apk]
+    paths:
+      - '.github/workflows/export-gradle-wrapper.yml'
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle 9.6
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Generate Gradle wrapper
+        run: |
+          rm -rf /tmp/wrapper-project
+          mkdir -p /tmp/wrapper-project
+          cd /tmp/wrapper-project
+          printf 'rootProject.name = "wrapper-project"\n' > settings.gradle.kts
+          printf 'plugins { base }\n' > build.gradle.kts
+          gradle wrapper --gradle-version 9.6.0 --distribution-type bin
+          mkdir -p "$GITHUB_WORKSPACE/wrapper-out/gradle/wrapper"
+          cp gradlew "$GITHUB_WORKSPACE/wrapper-out/gradlew"
+          cp gradlew.bat "$GITHUB_WORKSPACE/wrapper-out/gradlew.bat"
+          cp gradle/wrapper/gradle-wrapper.jar "$GITHUB_WORKSPACE/wrapper-out/gradle/wrapper/gradle-wrapper.jar"
+          cp gradle/wrapper/gradle-wrapper.properties "$GITHUB_WORKSPACE/wrapper-out/gradle/wrapper/gradle-wrapper.properties"
+
+      - name: Upload wrapper files
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-9.6-wrapper
+          path: wrapper-out
+          if-no-files-found: error
+          retention-days: 1
