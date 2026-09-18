@@ -88,16 +88,15 @@ jobs:
           dance = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
           s = dance.read_text(encoding='utf-8')
 
-          # Keep the v3.2 YouTube embed fix, whether already present or not.
-          old_base = 'webView.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)'
-          if old_base in s:
-              s = s.replace(
-                  old_base,
-                  'webView.loadDataWithBaseURL("https://com.clipmerge.studio/", html, "text/html", "UTF-8", null)',
-                  1,
-              )
-          if 'https://com.clipmerge.studio/' not in s:
-              raise SystemExit('YouTube WebView origin/base URL missing')
+          # Keep the v3.2 YouTube embed fix. Match either single-line or multi-line source.
+          s, base_count = re.subn(
+              r'webView\.loadDataWithBaseURL\(\s*"[^"]+"',
+              'webView.loadDataWithBaseURL("https://com.clipmerge.studio/"',
+              s,
+              count=1,
+          )
+          if base_count != 1:
+              raise SystemExit('YouTube WebView base URL call not found')
 
           if "origin:'https://com.clipmerge.studio'" not in s:
               s, count = re.subn(
