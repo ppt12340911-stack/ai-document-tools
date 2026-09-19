@@ -50,16 +50,25 @@ jobs:
               .chatgpt-build/clipmerge/v36/dance_part1.txt \
               .chatgpt-build/clipmerge/v36/dance_part2.txt \
               .chatgpt-build/clipmerge/v36/dance_part3.txt > /tmp/dance.b64
-          base64 -d /tmp/dance.b64 | gzip -d > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          echo "Testing DANCE payload"
+          base64 -d /tmp/dance.b64 > /tmp/dance.gz
+          gzip -t /tmp/dance.gz
+          gzip -dc /tmp/dance.gz > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
           # Exact v3.7 local editing screen with audio mixing.
           cat .chatgpt-build/clipmerge/v37/MainActivity.part0.txt \
               .chatgpt-build/clipmerge/v37/MainActivity.part1.txt \
               .chatgpt-build/clipmerge/v37/MainActivity.part2.txt \
               .chatgpt-build/clipmerge/v37/MainActivity.part3.txt > /tmp/main.b64
-          base64 -d /tmp/main.b64 | gzip -d > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
+          echo "Testing MAIN payload"
+          base64 -d /tmp/main.b64 > /tmp/main.gz
+          gzip -t /tmp/main.gz
+          gzip -dc /tmp/main.gz > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
 
-          base64 -d .chatgpt-build/clipmerge/v37/SplashActivity.txt | gzip -d > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/SplashActivity.kt
+          echo "Testing SPLASH payload"
+          base64 -d .chatgpt-build/clipmerge/v37/SplashActivity.txt > /tmp/splash.gz
+          gzip -t /tmp/splash.gz
+          gzip -dc /tmp/splash.gz > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/SplashActivity.kt
 
           python3 - <<'PY'
           from pathlib import Path
