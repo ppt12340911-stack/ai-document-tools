@@ -101,8 +101,8 @@ jobs:
           sp = sp.replace(
               'root.addView(icon, LinearLayout.LayoutParams(320, 320))',
               '''val dm = resources.displayMetrics
-        val iconSize = (dm.heightPixels * 0.58f).toInt().coerceAtLeast(360)
-        root.addView(icon, LinearLayout.LayoutParams(iconSize, iconSize))'''
+                  val iconSize = (dm.heightPixels * 0.58f).toInt().coerceAtLeast(360)
+                  root.addView(icon, LinearLayout.LayoutParams(iconSize, iconSize))'''
           )
           sp = sp.replace('textSize = 26f', 'textSize = 30f')
           sp = sp.replace('}, 900L)', '}, 1050L)')
@@ -125,21 +125,21 @@ jobs:
           ms = ms.replace(
               'private lateinit var exportButton: Button\n',
               '''private lateinit var exportButton: Button
-    private lateinit var originalVolumeText: TextView
-    private lateinit var backgroundVolumeText: TextView
-    private lateinit var backgroundMusicText: TextView
-    private lateinit var backgroundLoopCheck: CheckBox
-'''
+              private lateinit var originalVolumeText: TextView
+              private lateinit var backgroundVolumeText: TextView
+              private lateinit var backgroundMusicText: TextView
+              private lateinit var backgroundLoopCheck: CheckBox
+          '''
           )
           ms = ms.replace(
               'private var transformer: Transformer? = null\n',
               '''private var transformer: Transformer? = null
-    private var originalVolumePercent = 100
-    private var backgroundVolumePercent = 30
-    private var backgroundAudioUri: Uri? = null
-    private var backgroundAudioName: String = ""
-    private var backgroundAudioDurationMs: Long = 0L
-'''
+              private var originalVolumePercent = 100
+              private var backgroundVolumePercent = 30
+              private var backgroundAudioUri: Uri? = null
+              private var backgroundAudioName: String = ""
+              private var backgroundAudioDurationMs: Long = 0L
+          '''
           )
           ms = re.sub(
               r'text = "ClipMerge 爆笑剪片工坊  v\d+\.\d+"',
@@ -157,26 +157,26 @@ jobs:
 
           audio_anchor = '''        right.addView(editRow2)
 
-        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {'''
+                  progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {'''
           audio_ui = '''        right.addView(editRow2)
 
-        val audioTitle = TextView(this).apply {
+                  val audioTitle = TextView(this).apply {
             text = "🎵 聲音合併 / 背景音樂"
             textSize = 18f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             setTextColor(Color.rgb(15, 23, 42))
             setPadding(0, dp(12), 0, dp(4))
-        }
-        right.addView(audioTitle)
+                  }
+                  right.addView(audioTitle)
 
-        originalVolumeText = TextView(this).apply {
+                  originalVolumeText = TextView(this).apply {
             text = "影片原音：100%"
             textSize = 14f
             setTextColor(Color.rgb(51, 65, 85))
-        }
-        right.addView(originalVolumeText)
+                  }
+                  right.addView(originalVolumeText)
 
-        val originalVolumeSeek = SeekBar(this).apply {
+                  val originalVolumeSeek = SeekBar(this).apply {
             max = 100
             progress = originalVolumePercent
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -188,37 +188,37 @@ jobs:
                 override fun onStartTrackingTouch(seekBar: SeekBar?) {}
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {}
             })
-        }
-        right.addView(originalVolumeSeek, LinearLayout.LayoutParams(
+                  }
+                  right.addView(originalVolumeSeek, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, dp(46)
-        ))
+                  ))
 
-        val musicRow = LinearLayout(this).apply {
+                  val musicRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-        }
-        musicRow.addView(bigButton("🎵 選背景音樂") { pickBackgroundAudio() }, LinearLayout.LayoutParams(0, dp(52), 1f))
-        musicRow.addView(space(dp(6)))
-        musicRow.addView(bigButton("✖ 移除音樂") { clearBackgroundAudio() }, LinearLayout.LayoutParams(0, dp(52), 1f))
-        right.addView(musicRow)
+                  }
+                  musicRow.addView(bigButton("🎵 選背景音樂") { pickBackgroundAudio() }, LinearLayout.LayoutParams(0, dp(52), 1f))
+                  musicRow.addView(space(dp(6)))
+                  musicRow.addView(bigButton("✖ 移除音樂") { clearBackgroundAudio() }, LinearLayout.LayoutParams(0, dp(52), 1f))
+                  right.addView(musicRow)
 
-        backgroundMusicText = TextView(this).apply {
+                  backgroundMusicText = TextView(this).apply {
             text = "背景音樂：尚未選擇"
             textSize = 13f
             maxLines = 2
             setTextColor(Color.rgb(71, 85, 105))
             setPadding(0, dp(4), 0, dp(2))
-        }
-        right.addView(backgroundMusicText)
+                  }
+                  right.addView(backgroundMusicText)
 
-        backgroundVolumeText = TextView(this).apply {
+                  backgroundVolumeText = TextView(this).apply {
             text = "背景音樂：30%"
             textSize = 14f
             setTextColor(Color.rgb(51, 65, 85))
-        }
-        right.addView(backgroundVolumeText)
+                  }
+                  right.addView(backgroundVolumeText)
 
-        val backgroundVolumeSeek = SeekBar(this).apply {
+                  val backgroundVolumeSeek = SeekBar(this).apply {
             max = 100
             progress = backgroundVolumePercent
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -229,20 +229,20 @@ jobs:
                 override fun onStartTrackingTouch(seekBar: SeekBar?) {}
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {}
             })
-        }
-        right.addView(backgroundVolumeSeek, LinearLayout.LayoutParams(
+                  }
+                  right.addView(backgroundVolumeSeek, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, dp(46)
-        ))
+                  ))
 
-        backgroundLoopCheck = CheckBox(this).apply {
+                  backgroundLoopCheck = CheckBox(this).apply {
             text = "影片比音樂長時，自動循環背景音樂"
             isChecked = true
             textSize = 14f
             setTextColor(Color.rgb(51, 65, 85))
-        }
-        right.addView(backgroundLoopCheck)
+                  }
+                  right.addView(backgroundLoopCheck)
 
-        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {'''
+                  progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {'''
           if audio_anchor not in ms:
               raise SystemExit('v3.7 audio UI anchor not found')
           ms = ms.replace(audio_anchor, audio_ui, 1)
@@ -253,7 +253,7 @@ jobs:
                     exportComposition()
                 }
             }
-'''
+          '''
           result_block = '''            REQ_SAVE_OUTPUT -> {
                 pendingOutputUri = data.data
                 if (pendingOutputUri != null) {
@@ -275,47 +275,47 @@ jobs:
                 updateBackgroundAudioLabel()
                 toast("已加入背景音樂")
             }
-'''
+          '''
           if result_anchor not in ms:
               raise SystemExit('v3.7 activity result anchor not found')
           ms = ms.replace(result_anchor, result_block, 1)
 
           helper_anchor = '    private fun queryDisplayName(uri: Uri): String {'
           helpers = '''    private fun pickBackgroundAudio() {
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                  val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "audio/*"
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-        }
-        startActivityForResult(intent, REQ_PICK_AUDIO)
-    }
+                  }
+                  startActivityForResult(intent, REQ_PICK_AUDIO)
+              }
 
-    private fun clearBackgroundAudio() {
-        backgroundAudioUri = null
-        backgroundAudioName = ""
-        backgroundAudioDurationMs = 0L
-        updateBackgroundAudioLabel()
-        toast("已移除背景音樂")
-    }
+              private fun clearBackgroundAudio() {
+                  backgroundAudioUri = null
+                  backgroundAudioName = ""
+                  backgroundAudioDurationMs = 0L
+                  updateBackgroundAudioLabel()
+                  toast("已移除背景音樂")
+              }
 
-    private fun updateBackgroundAudioLabel() {
-        if (!::backgroundMusicText.isInitialized) return
-        backgroundMusicText.text = if (backgroundAudioUri == null) {
+              private fun updateBackgroundAudioLabel() {
+                  if (!::backgroundMusicText.isInitialized) return
+                  backgroundMusicText.text = if (backgroundAudioUri == null) {
             "背景音樂：尚未選擇"
-        } else {
+                  } else {
             val duration = if (backgroundAudioDurationMs > 0) "  (${fmt(backgroundAudioDurationMs)})" else ""
             "背景音樂：${backgroundAudioName}${duration}"
-        }
-    }
+                  }
+              }
 
-    private fun gainEffects(percent: Int): Effects {
-        val gain = percent.coerceIn(0, 100) / 100f
-        if (gain >= 0.999f) return Effects(emptyList(), emptyList())
-        val provider = DefaultGainProvider.Builder(gain).build()
-        return Effects(listOf(GainProcessor(provider)), emptyList())
-    }
+              private fun gainEffects(percent: Int): Effects {
+                  val gain = percent.coerceIn(0, 100) / 100f
+                  if (gain >= 0.999f) return Effects(emptyList(), emptyList())
+                  val provider = DefaultGainProvider.Builder(gain).build()
+                  return Effects(listOf(GainProcessor(provider)), emptyList())
+              }
 
-'''
+          '''
           if helper_anchor not in ms:
               raise SystemExit('v3.7 helper anchor not found')
           ms = ms.replace(helper_anchor, helpers + helper_anchor, 1)
@@ -337,11 +337,11 @@ jobs:
                 .build()
 
             EditedMediaItem.Builder(mediaItem).build()
-        }
+                  }
 
-        val sequence = EditedMediaItemSequence.withAudioAndVideoFrom(editedItems)
-        val composition = Composition.Builder(listOf(sequence)).build()
-'''
+                  val sequence = EditedMediaItemSequence.withAudioAndVideoFrom(editedItems)
+                  val composition = Composition.Builder(listOf(sequence)).build()
+          '''
           export_new = '''        val editedItems = clips.map { c ->
             val clipping = MediaItem.ClippingConfiguration.Builder()
                 .setStartPositionMs(c.startMs)
@@ -356,12 +356,12 @@ jobs:
             EditedMediaItem.Builder(mediaItem)
                 .setEffects(gainEffects(originalVolumePercent))
                 .build()
-        }
+                  }
 
-        val videoSequence = EditedMediaItemSequence.withAudioAndVideoFrom(editedItems)
-        val sequences = mutableListOf(videoSequence)
+                  val videoSequence = EditedMediaItemSequence.withAudioAndVideoFrom(editedItems)
+                  val sequences = mutableListOf(videoSequence)
 
-        backgroundAudioUri?.let { musicUri ->
+                  backgroundAudioUri?.let { musicUri ->
             val totalVideoMs = clips.sumOf { it.endMs - it.startMs }
             val musicItemBuilder = MediaItem.Builder().setUri(musicUri)
             if (!backgroundLoopCheck.isChecked && backgroundAudioDurationMs > totalVideoMs && totalVideoMs > 0) {
@@ -380,10 +380,10 @@ jobs:
                 backgroundSequence = backgroundSequence.buildUpon().setIsLooping(true).build()
             }
             sequences.add(backgroundSequence)
-        }
+                  }
 
-        val composition = Composition.Builder(sequences).build()
-'''
+                  val composition = Composition.Builder(sequences).build()
+          '''
           if export_old not in ms:
               raise SystemExit('v3.7 export composition block not found')
           ms = ms.replace(export_old, export_new, 1)
