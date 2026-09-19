@@ -1,4 +1,4 @@
-name: Build 怕嘎球人剪片工坊 v3.7 APK
+name: Build 怕嘎球人剪片工坊 v3.8 APK
 on:
   push:
     branches: [build-clipmerge-apk]
@@ -28,7 +28,7 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Prepare v3.7 project
+      - name: Prepare v3.8 project
         run: |
           cat .chatgpt-build/clipmerge/v28_final/part00.txt \
               .chatgpt-build/clipmerge/v28_final/part01.txt \
@@ -55,7 +55,7 @@ jobs:
           gzip -t /tmp/dance.gz
           gzip -dc /tmp/dance.gz > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
-          # Exact v3.7 local editing screen with audio mixing.
+          # Exact v3.7 local editing screen with audio mixing, patched to v3.8.
           cat .chatgpt-build/clipmerge/v37/MainActivity.part0.txt \
               .chatgpt-build/clipmerge/v37/MainActivity.part1.txt \
               .chatgpt-build/clipmerge/v37/MainActivity.part2.txt \
@@ -107,6 +107,22 @@ jobs:
           strings = root / 'app/src/main/res/values/strings.xml'
           st = strings.read_text(encoding='utf-8').replace('ClipMerge 爆笑剪片工坊', '怕嘎球人剪片工坊')
           strings.write_text(st, encoding='utf-8')
+
+          main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
+          main_text = main.read_text(encoding='utf-8').replace(
+              '怕嘎球人剪片工坊  v3.7',
+              '怕嘎球人剪片工坊  v3.8'
+          )
+          main.write_text(main_text, encoding='utf-8')
+
+          splash = root / 'app/src/main/java/com/clipmerge/studio/SplashActivity.kt'
+          sp = splash.read_text(encoding='utf-8')
+          sp = sp.replace('setPadding(24, 24, 24, 24)', 'setPadding(16, 8, 16, 8)')
+          sp = sp.replace(
+              'val iconSize = (dm.heightPixels * 0.58f).toInt().coerceAtLeast(360)',
+              'val iconSize = (dm.heightPixels * 0.72f).toInt().coerceAtLeast(440)'
+          )
+          splash.write_text(sp, encoding='utf-8')
           PY
 
           cat > .chatgpt-build/clipmerge-v37-src/build.gradle.kts <<'EOF'
@@ -128,8 +144,8 @@ jobs:
                   applicationId = "com.clipmerge.studio"
                   minSdk = 26
                   targetSdk = 36
-                  versionCode = 17
-                  versionName = "3.7"
+                  versionCode = 18
+                  versionName = "3.8"
               }
 
               buildFeatures { buildConfig = true }
@@ -151,7 +167,7 @@ jobs:
 
           sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v37-src/gradle.properties
 
-          grep -q '怕嘎球人剪片工坊  v3.7' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
+          grep -q '怕嘎球人剪片工坊  v3.8' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
           grep -q 'GainProcessor' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
           grep -q 'withAudioFrom' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
           grep -q 'iconSize = (dm.heightPixels \* 0.58f)' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/SplashActivity.kt
@@ -164,12 +180,12 @@ jobs:
       - name: Copy APK
         run: |
           mkdir -p out
-          cp .chatgpt-build/clipmerge-v37-src/app/build/outputs/apk/debug/app-debug.apk "out/怕嘎球人剪片工坊-v3.7.apk"
+          cp .chatgpt-build/clipmerge-v37-src/app/build/outputs/apk/debug/app-debug.apk "out/怕嘎球人剪片工坊-v3.8.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: 怕嘎球人剪片工坊-v3.7-APK
-          path: out/怕嘎球人剪片工坊-v3.7.apk
+          name: 怕嘎球人剪片工坊-v3.8-APK
+          path: out/怕嘎球人剪片工坊-v3.8.apk
           if-no-files-found: error
           retention-days: 1
