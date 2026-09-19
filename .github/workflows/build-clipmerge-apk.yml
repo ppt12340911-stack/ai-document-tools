@@ -1,4 +1,4 @@
-name: Build ClipMerge Studio v3.6 APK
+name: Build ClipMerge Studio v3.7 APK
 on:
   push:
     branches: [build-clipmerge-apk]
@@ -28,7 +28,7 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Prepare v3.6 project
+      - name: Prepare v3.7 project
         run: |
           cat .chatgpt-build/clipmerge/v28_final/part00.txt \
               .chatgpt-build/clipmerge/v28_final/part01.txt \
@@ -41,21 +41,21 @@ jobs:
           base64 -d /tmp/clipmerge_v28.b64 > /tmp/clipmerge_v28.zip
           unzip -t /tmp/clipmerge_v28.zip
 
-          rm -rf .chatgpt-build/clipmerge-v36-src
-          mkdir -p .chatgpt-build/clipmerge-v36-src
-          unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v36-src
+          rm -rf .chatgpt-build/clipmerge-v37-src
+          mkdir -p .chatgpt-build/clipmerge-v37-src
+          unzip -q -o /tmp/clipmerge_v28.zip -d .chatgpt-build/clipmerge-v37-src
 
           cat .chatgpt-build/clipmerge/v36/dance_part0.txt \
               .chatgpt-build/clipmerge/v36/dance_part1.txt \
               .chatgpt-build/clipmerge/v36/dance_part2.txt \
               .chatgpt-build/clipmerge/v36/dance_part3.txt > /tmp/dance_v36.b64
-          base64 -d /tmp/dance_v36.b64 | gzip -d > .chatgpt-build/clipmerge-v36-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          base64 -d /tmp/dance_v36.b64 | gzip -d > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          root = Path('.chatgpt-build/clipmerge-v36-src')
+          root = Path('.chatgpt-build/clipmerge-v37-src')
 
           manifest = root / 'app/src/main/AndroidManifest.xml'
           m = manifest.read_text(encoding='utf-8')
@@ -84,19 +84,328 @@ jobs:
               raise SystemExit('DancePracticeActivity manifest block not found')
           manifest.write_text(m2, encoding='utf-8')
 
+          # Rename app and enlarge splash artwork.
+          strings = root / 'app/src/main/res/values/strings.xml'
+          st = strings.read_text(encoding='utf-8')
+          st = st.replace('ClipMerge 爆笑剪片工坊', '怕嘎球人剪片工坊')
+          strings.write_text(st, encoding='utf-8')
+
+          m = manifest.read_text(encoding='utf-8')
+          m = m.replace('android:label="ClipMerge 爆笑剪片工坊"', 'android:label="怕嘎球人剪片工坊"')
+          manifest.write_text(m, encoding='utf-8')
+
+          splash = root / 'app/src/main/java/com/clipmerge/studio/SplashActivity.kt'
+          sp = splash.read_text(encoding='utf-8')
+          sp = sp.replace('text = "ClipMerge 爆笑剪片工坊"', 'text = "怕嘎球人剪片工坊"')
+          sp = sp.replace('text = "剪影片，也能練舞 💃"', 'text = "剪影片・配音樂・也能練舞 💃"')
+          sp = sp.replace(
+              'root.addView(icon, LinearLayout.LayoutParams(320, 320))',
+              '''val dm = resources.displayMetrics
+        val iconSize = (dm.heightPixels * 0.58f).toInt().coerceAtLeast(360)
+        root.addView(icon, LinearLayout.LayoutParams(iconSize, iconSize))'''
+          )
+          sp = sp.replace('textSize = 26f', 'textSize = 30f')
+          sp = sp.replace('}, 900L)', '}, 1050L)')
+          splash.write_text(sp, encoding='utf-8')
+
           main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
           ms = main.read_text(encoding='utf-8')
-          ms = re.sub(r'ClipMerge 爆笑剪片工坊\s+v\d+\.\d+', 'ClipMerge 爆笑剪片工坊  v3.6', ms)
+          ms = ms.replace(
+              'import androidx.media3.common.MediaItem\n',
+              'import androidx.media3.common.MediaItem\nimport androidx.media3.common.audio.DefaultGainProvider\nimport androidx.media3.common.audio.GainProcessor\n'
+          )
+          ms = ms.replace(
+              'import androidx.media3.transformer.EditedMediaItemSequence\n',
+              'import androidx.media3.transformer.EditedMediaItemSequence\nimport androidx.media3.transformer.Effects\n'
+          )
+          ms = ms.replace(
+              'private const val REQ_SAVE_OUTPUT = 1002\n',
+              'private const val REQ_SAVE_OUTPUT = 1002\n        private const val REQ_PICK_AUDIO = 1003\n'
+          )
+          ms = ms.replace(
+              'private lateinit var exportButton: Button\n',
+              '''private lateinit var exportButton: Button
+    private lateinit var originalVolumeText: TextView
+    private lateinit var backgroundVolumeText: TextView
+    private lateinit var backgroundMusicText: TextView
+    private lateinit var backgroundLoopCheck: CheckBox
+'''
+          )
+          ms = ms.replace(
+              'private var transformer: Transformer? = null\n',
+              '''private var transformer: Transformer? = null
+    private var originalVolumePercent = 100
+    private var backgroundVolumePercent = 30
+    private var backgroundAudioUri: Uri? = null
+    private var backgroundAudioName: String = ""
+    private var backgroundAudioDurationMs: Long = 0L
+'''
+          )
+          ms = re.sub(
+              r'text = "ClipMerge 爆笑剪片工坊  v\d+\.\d+"',
+              'text = "怕嘎球人剪片工坊  v3.7"',
+              ms
+          )
+          ms = ms.replace(
+              'setStatus("先丟幾支影片進來，我們開始爆笑剪片！")',
+              'setStatus("先加入影片，再依需要調整原音與背景音樂。")'
+          )
+          ms = ms.replace(
+              'text = "本機影片可真正裁切並輸出 MP4；YouTube 請用「💃 YouTube 練舞」設定 A–B 片段、慢速與循環練習。"',
+              'text = "本機影片可裁切、合併並混合原音＋背景音樂；YouTube 請用「💃 YouTube 練舞」。"'
+          )
+
+          audio_anchor = '''        right.addView(editRow2)
+
+        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {'''
+          audio_ui = '''        right.addView(editRow2)
+
+        val audioTitle = TextView(this).apply {
+            text = "🎵 聲音合併 / 背景音樂"
+            textSize = 18f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(Color.rgb(15, 23, 42))
+            setPadding(0, dp(12), 0, dp(4))
+        }
+        right.addView(audioTitle)
+
+        originalVolumeText = TextView(this).apply {
+            text = "影片原音：100%"
+            textSize = 14f
+            setTextColor(Color.rgb(51, 65, 85))
+        }
+        right.addView(originalVolumeText)
+
+        val originalVolumeSeek = SeekBar(this).apply {
+            max = 100
+            progress = originalVolumePercent
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    originalVolumePercent = progress
+                    originalVolumeText.text = "影片原音：${progress}%"
+                    player.volume = progress / 100f
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+        }
+        right.addView(originalVolumeSeek, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, dp(46)
+        ))
+
+        val musicRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        musicRow.addView(bigButton("🎵 選背景音樂") { pickBackgroundAudio() }, LinearLayout.LayoutParams(0, dp(52), 1f))
+        musicRow.addView(space(dp(6)))
+        musicRow.addView(bigButton("✖ 移除音樂") { clearBackgroundAudio() }, LinearLayout.LayoutParams(0, dp(52), 1f))
+        right.addView(musicRow)
+
+        backgroundMusicText = TextView(this).apply {
+            text = "背景音樂：尚未選擇"
+            textSize = 13f
+            maxLines = 2
+            setTextColor(Color.rgb(71, 85, 105))
+            setPadding(0, dp(4), 0, dp(2))
+        }
+        right.addView(backgroundMusicText)
+
+        backgroundVolumeText = TextView(this).apply {
+            text = "背景音樂：30%"
+            textSize = 14f
+            setTextColor(Color.rgb(51, 65, 85))
+        }
+        right.addView(backgroundVolumeText)
+
+        val backgroundVolumeSeek = SeekBar(this).apply {
+            max = 100
+            progress = backgroundVolumePercent
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    backgroundVolumePercent = progress
+                    backgroundVolumeText.text = "背景音樂：${progress}%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+        }
+        right.addView(backgroundVolumeSeek, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, dp(46)
+        ))
+
+        backgroundLoopCheck = CheckBox(this).apply {
+            text = "影片比音樂長時，自動循環背景音樂"
+            isChecked = true
+            textSize = 14f
+            setTextColor(Color.rgb(51, 65, 85))
+        }
+        right.addView(backgroundLoopCheck)
+
+        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {'''
+          if audio_anchor not in ms:
+              raise SystemExit('v3.7 audio UI anchor not found')
+          ms = ms.replace(audio_anchor, audio_ui, 1)
+
+          result_anchor = '''            REQ_SAVE_OUTPUT -> {
+                pendingOutputUri = data.data
+                if (pendingOutputUri != null) {
+                    exportComposition()
+                }
+            }
+'''
+          result_block = '''            REQ_SAVE_OUTPUT -> {
+                pendingOutputUri = data.data
+                if (pendingOutputUri != null) {
+                    exportComposition()
+                }
+            }
+
+            REQ_PICK_AUDIO -> {
+                val uri = data.data ?: return
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (_: Exception) {}
+                backgroundAudioUri = uri
+                backgroundAudioName = queryDisplayName(uri)
+                backgroundAudioDurationMs = queryDuration(uri)
+                updateBackgroundAudioLabel()
+                toast("已加入背景音樂")
+            }
+'''
+          if result_anchor not in ms:
+              raise SystemExit('v3.7 activity result anchor not found')
+          ms = ms.replace(result_anchor, result_block, 1)
+
+          helper_anchor = '    private fun queryDisplayName(uri: Uri): String {'
+          helpers = '''    private fun pickBackgroundAudio() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "audio/*"
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        startActivityForResult(intent, REQ_PICK_AUDIO)
+    }
+
+    private fun clearBackgroundAudio() {
+        backgroundAudioUri = null
+        backgroundAudioName = ""
+        backgroundAudioDurationMs = 0L
+        updateBackgroundAudioLabel()
+        toast("已移除背景音樂")
+    }
+
+    private fun updateBackgroundAudioLabel() {
+        if (!::backgroundMusicText.isInitialized) return
+        backgroundMusicText.text = if (backgroundAudioUri == null) {
+            "背景音樂：尚未選擇"
+        } else {
+            val duration = if (backgroundAudioDurationMs > 0) "  (${fmt(backgroundAudioDurationMs)})" else ""
+            "背景音樂：${backgroundAudioName}${duration}"
+        }
+    }
+
+    private fun gainEffects(percent: Int): Effects {
+        val gain = percent.coerceIn(0, 100) / 100f
+        if (gain >= 0.999f) return Effects(emptyList(), emptyList())
+        val provider = DefaultGainProvider.Builder(gain).build()
+        return Effects(listOf(GainProcessor(provider)), emptyList())
+    }
+
+'''
+          if helper_anchor not in ms:
+              raise SystemExit('v3.7 helper anchor not found')
+          ms = ms.replace(helper_anchor, helpers + helper_anchor, 1)
+
+          ms = ms.replace(
+              'putExtra(Intent.EXTRA_TITLE, "ClipMerge_$stamp.mp4")',
+              'putExtra(Intent.EXTRA_TITLE, "怕嘎球人剪片_$stamp.mp4")'
+          )
+
+          export_old = '''        val editedItems = clips.map { c ->
+            val clipping = MediaItem.ClippingConfiguration.Builder()
+                .setStartPositionMs(c.startMs)
+                .setEndPositionMs(c.endMs)
+                .build()
+
+            val mediaItem = MediaItem.Builder()
+                .setUri(c.source.uri)
+                .setClippingConfiguration(clipping)
+                .build()
+
+            EditedMediaItem.Builder(mediaItem).build()
+        }
+
+        val sequence = EditedMediaItemSequence.withAudioAndVideoFrom(editedItems)
+        val composition = Composition.Builder(listOf(sequence)).build()
+'''
+          export_new = '''        val editedItems = clips.map { c ->
+            val clipping = MediaItem.ClippingConfiguration.Builder()
+                .setStartPositionMs(c.startMs)
+                .setEndPositionMs(c.endMs)
+                .build()
+
+            val mediaItem = MediaItem.Builder()
+                .setUri(c.source.uri)
+                .setClippingConfiguration(clipping)
+                .build()
+
+            EditedMediaItem.Builder(mediaItem)
+                .setEffects(gainEffects(originalVolumePercent))
+                .build()
+        }
+
+        val videoSequence = EditedMediaItemSequence.withAudioAndVideoFrom(editedItems)
+        val sequences = mutableListOf(videoSequence)
+
+        backgroundAudioUri?.let { musicUri ->
+            val totalVideoMs = clips.sumOf { it.endMs - it.startMs }
+            val musicItemBuilder = MediaItem.Builder().setUri(musicUri)
+            if (!backgroundLoopCheck.isChecked && backgroundAudioDurationMs > totalVideoMs && totalVideoMs > 0) {
+                musicItemBuilder.setClippingConfiguration(
+                    MediaItem.ClippingConfiguration.Builder()
+                        .setEndPositionMs(totalVideoMs)
+                        .build()
+                )
+            }
+            val backgroundEditedItem = EditedMediaItem.Builder(musicItemBuilder.build())
+                .setRemoveVideo(true)
+                .setEffects(gainEffects(backgroundVolumePercent))
+                .build()
+            var backgroundSequence = EditedMediaItemSequence.withAudioFrom(listOf(backgroundEditedItem))
+            if (backgroundLoopCheck.isChecked) {
+                backgroundSequence = backgroundSequence.buildUpon().setIsLooping(true).build()
+            }
+            sequences.add(backgroundSequence)
+        }
+
+        val composition = Composition.Builder(sequences).build()
+'''
+          if export_old not in ms:
+              raise SystemExit('v3.7 export composition block not found')
+          ms = ms.replace(export_old, export_new, 1)
+          ms = ms.replace(
+              'setStatus("準備輸出影片…")',
+              'setStatus(if (backgroundAudioUri != null) "準備混合影片原音與背景音樂…" else "準備輸出影片…")'
+          )
+          ms = ms.replace(
+              'setStatus("正在合併與輸出… ${holder.progress}%")',
+              'setStatus("正在合併、混音與輸出… ${holder.progress}%")'
+          )
+
           main.write_text(ms, encoding='utf-8')
           PY
 
-          cat > .chatgpt-build/clipmerge-v36-src/build.gradle.kts <<'EOF'
+          cat > .chatgpt-build/clipmerge-v37-src/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application") version "9.4.0" apply false
           }
           EOF
 
-          cat > .chatgpt-build/clipmerge-v36-src/app/build.gradle.kts <<'EOF'
+          cat > .chatgpt-build/clipmerge-v37-src/app/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application")
           }
@@ -109,8 +418,8 @@ jobs:
                   applicationId = "com.clipmerge.studio"
                   minSdk = 26
                   targetSdk = 36
-                  versionCode = 16
-                  versionName = "3.6"
+                  versionCode = 17
+                  versionName = "3.7"
               }
 
               buildFeatures { buildConfig = true }
@@ -130,28 +439,32 @@ jobs:
           }
           EOF
 
-          sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v36-src/gradle.properties
-          grep -q 'YouTube 練舞剪輯 v3.6' .chatgpt-build/clipmerge-v36-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'text = "片段設定"' .chatgpt-build/clipmerge-v36-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'players=\[null,null\]' .chatgpt-build/clipmerge-v36-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'function prepareNext' .chatgpt-build/clipmerge-v36-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'val abRow = LinearLayout' .chatgpt-build/clipmerge-v36-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'val previewRow = LinearLayout' .chatgpt-build/clipmerge-v36-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
-          grep -q 'mainLayout.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.16f))' .chatgpt-build/clipmerge-v36-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v37-src/gradle.properties
+          grep -q 'YouTube 練舞剪輯 v3.7' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'text = "片段設定"' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'players=\[null,null\]' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'function prepareNext' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'val abRow = LinearLayout' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'val previewRow = LinearLayout' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q 'mainLayout.addView(rightScroll, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.16f))' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q '怕嘎球人剪片工坊  v3.7' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
+          grep -q 'GainProcessor' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
+          grep -q 'withAudioFrom' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
+          grep -q 'iconSize = (dm.heightPixels * 0.58f)' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/SplashActivity.kt
 
       - name: Build debug APK
-        working-directory: .chatgpt-build/clipmerge-v36-src
+        working-directory: .chatgpt-build/clipmerge-v37-src
         run: gradle --no-daemon --stacktrace :app:assembleDebug
 
       - name: Copy APK
         run: |
           mkdir -p out
-          cp .chatgpt-build/clipmerge-v36-src/app/build/outputs/apk/debug/app-debug.apk out/ClipMergeStudio-v3.6.apk
+          cp .chatgpt-build/clipmerge-v37-src/app/build/outputs/apk/debug/app-debug.apk out/怕嘎球人剪片工坊-v3.7.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ClipMergeStudio-v3.6-APK
-          path: out/ClipMergeStudio-v3.6.apk
+          name: 怕嘎球人剪片工坊-v3.7-APK
+          path: out/怕嘎球人剪片工坊-v3.7.apk
           if-no-files-found: error
           retention-days: 1
