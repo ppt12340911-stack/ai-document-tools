@@ -1,4 +1,4 @@
-name: Build 怕嘎球人剪片工坊 v3.8 APK
+name: Build 怕嘎球人剪片工坊 v3.8B APK
 on:
   push:
     branches: [build-clipmerge-apk]
@@ -28,7 +28,7 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Prepare v3.8 project
+      - name: Prepare v3.8B project
         run: |
           cat .chatgpt-build/clipmerge/v28_final/part00.txt \
               .chatgpt-build/clipmerge/v28_final/part01.txt \
@@ -55,7 +55,7 @@ jobs:
           gzip -t /tmp/dance.gz
           gzip -dc /tmp/dance.gz > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
-          # Exact v3.7 local editing screen with audio mixing, patched to v3.8.
+          # Exact v3.7 local editing screen with audio mixing, patched to v3.8B.
           cat .chatgpt-build/clipmerge/v37/MainActivity.part0.txt \
               .chatgpt-build/clipmerge/v37/MainActivity.part1.txt \
               .chatgpt-build/clipmerge/v37/MainActivity.part2.txt \
@@ -66,7 +66,7 @@ jobs:
           gzip -dc /tmp/main.gz > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
 
           echo "Testing SPLASH payload"
-          base64 -d .chatgpt-build/clipmerge/v37/SplashActivity.txt > /tmp/splash.gz
+          base64 -d .chatgpt-build/clipmerge/v38b/SplashActivity.txt > /tmp/splash.gz
           gzip -t /tmp/splash.gz
           gzip -dc /tmp/splash.gz > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/SplashActivity.kt
 
@@ -111,7 +111,7 @@ jobs:
           main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
           main_text = main.read_text(encoding='utf-8').replace(
               '怕嘎球人剪片工坊  v3.7',
-              '怕嘎球人剪片工坊  v3.8'
+              '怕嘎球人剪片工坊  v3.8B'
           )
           main.write_text(main_text, encoding='utf-8')
 
@@ -144,7 +144,7 @@ jobs:
                   applicationId = "com.clipmerge.studio"
                   minSdk = 26
                   targetSdk = 36
-                  versionCode = 18
+                  versionCode = 19
                   versionName = "3.8"
               }
 
@@ -167,10 +167,11 @@ jobs:
 
           sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v37-src/gradle.properties
 
-          grep -q '怕嘎球人剪片工坊  v3.8' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
+          grep -q '怕嘎球人剪片工坊  v3.8B' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
           grep -q 'GainProcessor' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
           grep -q 'withAudioFrom' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
-          grep -q 'iconSize = (dm.heightPixels \* 0.72f)' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/SplashActivity.kt
+          grep -q 'GradientDrawable' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/SplashActivity.kt
+          grep -q 'dm.widthPixels \* 0.36f' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/SplashActivity.kt
           grep -q 'YouTube 練舞剪輯 v3.6' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
       - name: Build debug APK
@@ -180,12 +181,12 @@ jobs:
       - name: Copy APK
         run: |
           mkdir -p out
-          cp .chatgpt-build/clipmerge-v37-src/app/build/outputs/apk/debug/app-debug.apk "out/怕嘎球人剪片工坊-v3.8.apk"
+          cp .chatgpt-build/clipmerge-v37-src/app/build/outputs/apk/debug/app-debug.apk "out/怕嘎球人剪片工坊-v3.8B.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: 怕嘎球人剪片工坊-v3.8-APK
-          path: out/怕嘎球人剪片工坊-v3.8.apk
+          name: 怕嘎球人剪片工坊-v3.8B-APK
+          path: out/怕嘎球人剪片工坊-v3.8B.apk
           if-no-files-found: error
           retention-days: 1
