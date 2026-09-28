@@ -144,7 +144,7 @@ jobs:
                   minSdk = 26
                   targetSdk = 36
                   versionCode = 20
-                  versionName = "3.8B"
+                  versionName = "3.9"
               }
 
               buildFeatures { buildConfig = true }
