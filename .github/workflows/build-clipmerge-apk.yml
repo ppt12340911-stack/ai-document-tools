@@ -224,6 +224,14 @@ jobs:
           grep -q 'github.com/ppt12340911-stack/ai-document-tools' "$DANCE_SRC" || { echo 'CHECK FAIL: real base URL'; exit 1; }
           grep -q 'Chrome/121.0.0.0' "$DANCE_SRC" || { echo 'CHECK FAIL: modern UA'; exit 1; }
 
+      - name: Upload prepared source
+        uses: actions/upload-artifact@v4
+        with:
+          name: clipmerge-v3.9.1-prepared-source
+          path: .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Build debug APK
         working-directory: .chatgpt-build/clipmerge-v37-src
         run: gradle --no-daemon --stacktrace :app:assembleDebug
