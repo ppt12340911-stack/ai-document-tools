@@ -1,4 +1,4 @@
-name: Build 怕嘎球人剪片工坊 v3.9 APK
+name: Build 怕嘎球人剪片工坊 v3.9.1 APK
 on:
   push:
     branches: [build-clipmerge-apk]
@@ -28,7 +28,7 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Prepare v3.9 project
+      - name: Prepare v3.9.1 project
         run: |
           cat .chatgpt-build/clipmerge/v28_final/part00.txt \
               .chatgpt-build/clipmerge/v28_final/part01.txt \
@@ -45,7 +45,7 @@ jobs:
           mkdir -p .chatgpt-build/clipmerge-v37-src
           unzip -q -o /tmp/base.zip -d .chatgpt-build/clipmerge-v37-src
 
-          # v3.9 dance screen: routines, mirror mode, per-clip settings and stronger preloading.
+          # v3.9.1 dance screen: routines, mirror mode, per-clip settings and stronger preloading.
           cat .chatgpt-build/clipmerge/v39/dance_part0.txt \
               .chatgpt-build/clipmerge/v39/dance_part1.txt \
               .chatgpt-build/clipmerge/v39/dance_part2.txt > /tmp/dance.b64
@@ -54,7 +54,7 @@ jobs:
           gzip -t /tmp/dance.gz
           gzip -dc /tmp/dance.gz > .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
-          # Exact v3.7 local editing screen with audio mixing, patched to v3.9.
+          # Exact v3.7 local editing screen with audio mixing, patched to v3.9.1.
           cat .chatgpt-build/clipmerge/v37/MainActivity.part0.txt \
               .chatgpt-build/clipmerge/v37/MainActivity.part1.txt \
               .chatgpt-build/clipmerge/v37/MainActivity.part2.txt \
@@ -110,9 +110,56 @@ jobs:
           main = root / 'app/src/main/java/com/clipmerge/studio/MainActivity.kt'
           main_text = main.read_text(encoding='utf-8').replace(
               '怕嘎球人剪片工坊  v3.7',
-              '怕嘎球人剪片工坊  v3.9'
+              '怕嘎球人剪片工坊  v3.9.1'
           )
           main.write_text(main_text, encoding='utf-8')
+
+          # v3.9.1: restore the proven-safe YouTube dual-player behavior.
+          # Keep the new v3.9 routine/mirror features, but stop aggressively autoplaying
+          # the hidden standby player, which can make Android WebView playback unstable.
+          dance = root / 'app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt'
+          dt = dance.read_text(encoding='utf-8')
+          dt = dt.replace(
+              "<meta name='viewport' content='width=device-width,initial-scale=1.0'>",
+              "<meta name='viewport' content='width=device-width,initial-scale=1.0'><meta name='referrer' content='strict-origin-when-cross-origin'>"
+          )
+          dt = dt.replace(
+              "playerVars:{origin:'https://com.clipmerge.studio',playsinline:1,controls:1,rel:0,fs:1},",
+              "playerVars:{origin:'https://com.clipmerge.studio',widget_referrer:'https://com.clipmerge.studio/',playsinline:1,controls:1,rel:0,fs:1,autoplay:0},"
+          )
+          dt = dt.replace("#playerB{visibility:hidden}", "#playerB{display:none}")
+          dt = dt.replace(
+              "playerDiv(0).style.visibility=(index===0?'visible':'hidden');\n    playerDiv(1).style.visibility=(index===1?'visible':'hidden');",
+              "playerDiv(0).style.display=(index===0?'block':'none');\n    playerDiv(1).style.display=(index===1?'block':'none');"
+          )
+          old_state = """    if(index!==active){
+      if(prepared.index===index && e.data===YT.PlayerState.PLAYING){
+        try{
+          var p=players[index];
+          p.pauseVideo();
+          p.seekTo(prepared.start,true);
+          p.setPlaybackRate(prepared.rate);
+          prepared.warmed=true;
+          Android.preloadReady();
+        }catch(x){}
+      }
+      return;
+    }"""
+          dt = dt.replace(old_state, "    if(index!==active) return;")
+          old_prepare = """    try{
+      p.mute();
+      p.loadVideoById({videoId:id,startSeconds:s});
+      setTimeout(function(){try{p.setPlaybackRate(r);}catch(e){}},120);
+      prepared={id:id,start:s,rate:r,index:standby,warmed:false};
+    }catch(e){}"""
+          new_prepare = """    try{
+      p.cueVideoById({videoId:id,startSeconds:s});
+      setTimeout(function(){try{p.setPlaybackRate(r);}catch(e){}},150);
+      prepared={id:id,start:s,rate:r,index:standby,warmed:true};
+    }catch(e){}"""
+          dt = dt.replace(old_prepare, new_prepare)
+          dt = dt.replace("try{old.pauseVideo();old.mute();}catch(e){}", "try{old.pauseVideo();}catch(e){}")
+          dance.write_text(dt, encoding='utf-8')
 
           splash = root / 'app/src/main/java/com/clipmerge/studio/SplashActivity.kt'
           sp = splash.read_text(encoding='utf-8')
@@ -143,8 +190,8 @@ jobs:
                   applicationId = "com.clipmerge.studio"
                   minSdk = 26
                   targetSdk = 36
-                  versionCode = 20
-                  versionName = "3.9"
+                  versionCode = 21
+                  versionName = "3.9.1"
               }
 
               buildFeatures { buildConfig = true }
@@ -166,7 +213,7 @@ jobs:
 
           sed -i '/android.builtInKotlin=/d;/android.newDsl=/d' .chatgpt-build/clipmerge-v37-src/gradle.properties
 
-          grep -q '怕嘎球人剪片工坊  v3.9' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
+          grep -q '怕嘎球人剪片工坊  v3.9.1' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
           grep -q 'GainProcessor' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
           grep -q 'withAudioFrom' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/MainActivity.kt
           grep -q 'GradientDrawable' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/SplashActivity.kt
@@ -176,6 +223,8 @@ jobs:
           grep -q '鏡像練舞' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
           grep -q 'A -0.1秒' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
           grep -q 'prepareNext' .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q "cueVideoById" .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
+          grep -q "strict-origin-when-cross-origin" .chatgpt-build/clipmerge-v37-src/app/src/main/java/com/clipmerge/studio/DancePracticeActivity.kt
 
       - name: Build debug APK
         working-directory: .chatgpt-build/clipmerge-v37-src
@@ -184,12 +233,12 @@ jobs:
       - name: Copy APK
         run: |
           mkdir -p out
-          cp .chatgpt-build/clipmerge-v37-src/app/build/outputs/apk/debug/app-debug.apk "out/怕嘎球人剪片工坊-v3.9.apk"
+          cp .chatgpt-build/clipmerge-v37-src/app/build/outputs/apk/debug/app-debug.apk "out/怕嘎球人剪片工坊-v3.9.1.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: 怕嘎球人剪片工坊-v3.9-APK
-          path: out/怕嘎球人剪片工坊-v3.9.apk
+          name: 怕嘎球人剪片工坊-v3.9.1-APK
+          path: out/怕嘎球人剪片工坊-v3.9.1.apk
           if-no-files-found: error
           retention-days: 1
