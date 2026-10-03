@@ -148,7 +148,7 @@ jobs:
           dt = re.sub(
               r'(domStorageEnabled\s*=\s*true)',
               r'''\1
-                userAgentString = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36"''',
+                webView.settings.userAgentString = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36"''',
               dt,
               count=1
           )
