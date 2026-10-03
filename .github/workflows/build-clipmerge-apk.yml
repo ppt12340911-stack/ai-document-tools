@@ -133,11 +133,8 @@ jobs:
               "playerDiv(0).style.visibility=(index===0?'visible':'hidden');\n    playerDiv(1).style.visibility=(index===1?'visible':'hidden');",
               "playerDiv(0).style.display=(index===0?'block':'none');\n    playerDiv(1).style.display=(index===1?'block':'none');"
           )
-          old_state = "    if(index!==active){\\n      if(prepared.index===index && e.data===YT.PlayerState.PLAYING){\\n        try{\\n          var p=players[index];\\n          p.pauseVideo();\\n          p.seekTo(prepared.start,true);\\n          p.setPlaybackRate(prepared.rate);\\n          prepared.warmed=true;\\n          Android.preloadReady();\\n        }catch(x){}\\n      }\\n      return;\\n    }"
-          dt = dt.replace(old_state, "    if(index!==active) return;")
-          old_prepare = "    try{\\n      p.mute();\\n      p.loadVideoById({videoId:id,startSeconds:s});\\n      setTimeout(function(){try{p.setPlaybackRate(r);}catch(e){}},120);\\n      prepared={id:id,start:s,rate:r,index:standby,warmed:false};\\n    }catch(e){}"
-          new_prepare = "    try{\\n      p.cueVideoById({videoId:id,startSeconds:s});\\n      setTimeout(function(){try{p.setPlaybackRate(r);}catch(e){}},150);\\n      prepared={id:id,start:s,rate:r,index:standby,warmed:true};\\n    }catch(e){}"
-          dt = dt.replace(old_prepare, new_prepare)
+          dt = re.sub(r"if\(index!==active\)\{[\s\S]*?return;\s*\}", "if(index!==active) return;", dt, count=1)
+          dt = re.sub(r"p\.mute\(\);\s*p\.loadVideoById\(\{videoId:id,startSeconds:s\}\);\s*setTimeout\(function\(\)\{try\{p\.setPlaybackRate\(r\);\}catch\(e\)\{\}\},120\);\s*prepared=\{id:id,start:s,rate:r,index:standby,warmed:false\};", "p.cueVideoById({videoId:id,startSeconds:s});\\n      setTimeout(function(){try{p.setPlaybackRate(r);}catch(e){}},150);\\n      prepared={id:id,start:s,rate:r,index:standby,warmed:true};", dt, count=1)
           dt = dt.replace("try{old.pauseVideo();old.mute();}catch(e){}", "try{old.pauseVideo();}catch(e){}")
           dance.write_text(dt, encoding='utf-8')
 
