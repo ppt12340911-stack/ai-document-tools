@@ -248,3 +248,20 @@ jobs:
           path: out/怕嘎球人剪片工坊-v3.9.2.apk
           if-no-files-found: error
           retention-days: 1
+
+      - name: Package complete Android Studio project
+        working-directory: .chatgpt-build/clipmerge-v37-src
+        run: |
+          gradle --no-daemon wrapper --gradle-version 9.6.0 --distribution-type bin
+          chmod +x gradlew
+          rm -rf .gradle app/build build
+          zip -qr "$GITHUB_WORKSPACE/out/怕嘎球人剪片工坊-v3.9.2-complete-project.zip" . \
+            -x ".gradle/*" "app/build/*" "build/*" "*.iml"
+
+      - name: Upload complete project
+        uses: actions/upload-artifact@v4
+        with:
+          name: 怕嘎球人剪片工坊-v3.9.2-complete-project
+          path: out/怕嘎球人剪片工坊-v3.9.2-complete-project.zip
+          if-no-files-found: error
+          retention-days: 1
