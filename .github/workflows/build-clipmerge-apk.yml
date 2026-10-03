@@ -133,31 +133,10 @@ jobs:
               "playerDiv(0).style.visibility=(index===0?'visible':'hidden');\n    playerDiv(1).style.visibility=(index===1?'visible':'hidden');",
               "playerDiv(0).style.display=(index===0?'block':'none');\n    playerDiv(1).style.display=(index===1?'block':'none');"
           )
-          old_state = """    if(index!==active){
-      if(prepared.index===index && e.data===YT.PlayerState.PLAYING){
-        try{
-          var p=players[index];
-          p.pauseVideo();
-          p.seekTo(prepared.start,true);
-          p.setPlaybackRate(prepared.rate);
-          prepared.warmed=true;
-          Android.preloadReady();
-        }catch(x){}
-      }
-      return;
-    }"""
+          old_state = "    if(index!==active){\\n      if(prepared.index===index && e.data===YT.PlayerState.PLAYING){\\n        try{\\n          var p=players[index];\\n          p.pauseVideo();\\n          p.seekTo(prepared.start,true);\\n          p.setPlaybackRate(prepared.rate);\\n          prepared.warmed=true;\\n          Android.preloadReady();\\n        }catch(x){}\\n      }\\n      return;\\n    }"
           dt = dt.replace(old_state, "    if(index!==active) return;")
-          old_prepare = """    try{
-      p.mute();
-      p.loadVideoById({videoId:id,startSeconds:s});
-      setTimeout(function(){try{p.setPlaybackRate(r);}catch(e){}},120);
-      prepared={id:id,start:s,rate:r,index:standby,warmed:false};
-    }catch(e){}"""
-          new_prepare = """    try{
-      p.cueVideoById({videoId:id,startSeconds:s});
-      setTimeout(function(){try{p.setPlaybackRate(r);}catch(e){}},150);
-      prepared={id:id,start:s,rate:r,index:standby,warmed:true};
-    }catch(e){}"""
+          old_prepare = "    try{\\n      p.mute();\\n      p.loadVideoById({videoId:id,startSeconds:s});\\n      setTimeout(function(){try{p.setPlaybackRate(r);}catch(e){}},120);\\n      prepared={id:id,start:s,rate:r,index:standby,warmed:false};\\n    }catch(e){}"
+          new_prepare = "    try{\\n      p.cueVideoById({videoId:id,startSeconds:s});\\n      setTimeout(function(){try{p.setPlaybackRate(r);}catch(e){}},150);\\n      prepared={id:id,start:s,rate:r,index:standby,warmed:true};\\n    }catch(e){}"
           dt = dt.replace(old_prepare, new_prepare)
           dt = dt.replace("try{old.pauseVideo();old.mute();}catch(e){}", "try{old.pauseVideo();}catch(e){}")
           dance.write_text(dt, encoding='utf-8')
